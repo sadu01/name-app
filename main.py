@@ -1,8 +1,21 @@
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 
 from fastapi import FastAPI
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+        "http://127.0.0.1:5501",
+        "http://localhost:5501",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 people = [
     {
@@ -58,7 +71,7 @@ people = [
             "city": "Kolkata",
             "email": "ramesh@example.com",
         },
-    },
+    }
 ]
 
 
@@ -101,7 +114,7 @@ def update_name_by_id(name_id: int, name: Optional[str] = None, details: Optiona
 
 
 @app.delete("/names/{name_id}")
-def delete_name_by_id(name_id: int):
+def delete_name_by_id(name_id: int, name: Optional[str] = None, details: Optional[dict] = None):
     for index, person in enumerate(people):
         if person["id"] == name_id:
             deleted_person = people.pop(index)
