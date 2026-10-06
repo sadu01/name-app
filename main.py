@@ -11,7 +11,7 @@ app.add_middleware(
         "http://localhost:5500",
         "http://127.0.0.1:5501",
         "http://localhost:5501",
-        "https://sadu-pavan.onrender.com",
+        "https://name-app-frontend.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
