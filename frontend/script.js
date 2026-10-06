@@ -1,5 +1,4 @@
-const API_URL = "http://127.0.0.1:8000";
-
+const API_URL = "https://sadu-pavan.onrender.com";
 fetch(`${API_URL}/names`)
     .then(response => response.json())
     .then(people => {
