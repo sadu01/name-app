@@ -35,6 +35,12 @@ function validateAge(ageInput) {
     return age;
 }
 
+function validateCity(city) {
+    if (!/^[\p{L}]+(?: +[\p{L}]+)*$/u.test(city)) {
+        throw new Error("City must contain letters and spaces only");
+    }
+}
+
 function validateEmail(email) {
     if (!email.includes("@")) {
         throw new Error("Email must contain @");
@@ -144,6 +150,7 @@ async function addPerson() {
         const ageInput = await collectField("Age", "Add person age", "number");
         const age = validateAge(ageInput);
         const city = await collectField("City", "Add person city");
+        validateCity(city);
         const email = await collectField("Email", "Add person email", "email");
         validateEmail(email);
 
@@ -180,6 +187,7 @@ async function updatePerson() {
         const ageInput = await collectField("Age", "Enter new age", "number");
         const age = validateAge(ageInput);
         const city = await collectField("City", "Enter new city");
+        validateCity(city);
         const email = await collectField("Email", "Enter new email", "email");
         validateEmail(email);
 

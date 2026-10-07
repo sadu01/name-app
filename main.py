@@ -15,6 +15,14 @@ class PersonDetails(BaseModel):
     city: str
     email: str
 
+    @field_validator("city")
+    @classmethod
+    def city_must_contain_letters_only(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized or any(not character.isalpha() and character != " " for character in normalized):
+            raise ValueError("City must contain letters and spaces only")
+        return normalized
+
     @field_validator("email")
     @classmethod
     def email_must_contain_at(cls, value: str) -> str:
@@ -40,6 +48,16 @@ class PersonDetailsUpdate(BaseModel):
     age: Optional[StrictInt] = Field(default=None, ge=1, le=110)
     city: Optional[str] = None
     email: Optional[str] = None
+
+    @field_validator("city")
+    @classmethod
+    def city_must_contain_letters_only(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = value.strip()
+        if not normalized or any(not character.isalpha() and character != " " for character in normalized):
+            raise ValueError("City must contain letters and spaces only")
+        return normalized
 
     @field_validator("email")
     @classmethod

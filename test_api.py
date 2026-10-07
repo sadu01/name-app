@@ -94,6 +94,7 @@ class PeopleApiTests(unittest.TestCase):
             {"name": "Priya", "details": {**valid_details, "age": 0}},
             {"name": "Priya", "details": {**valid_details, "age": 111}},
             {"name": "Priya", "details": {**valid_details, "age": "26"}},
+            {"name": "Priya", "details": {**valid_details, "city": "Pune123"}},
             {"name": "Priya", "details": {**valid_details, "email": "priya.example.com"}},
         ]
 
@@ -120,6 +121,7 @@ class PeopleApiTests(unittest.TestCase):
             {"details": {"age": 0}},
             {"details": {"age": 111}},
             {"details": {"age": "26"}},
+            {"details": {"city": "Pune123"}},
             {"details": {"email": "priya.example.com"}},
         ]
 
