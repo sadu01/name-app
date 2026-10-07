@@ -87,6 +87,47 @@ class PeopleApiTests(unittest.TestCase):
         self.assertEqual(person["name"], "Neha Sharma")
         self.assertEqual(person["details"]["city"], "Lucknow")
 
+    def test_create_rejects_invalid_name_age_and_email(self):
+        valid_details = {"age": 26, "city": "Pune", "email": "priya@example.com"}
+        invalid_people = [
+            {"name": "Priya123", "details": valid_details},
+            {"name": "Priya", "details": {**valid_details, "age": 0}},
+            {"name": "Priya", "details": {**valid_details, "age": 111}},
+            {"name": "Priya", "details": {**valid_details, "age": "26"}},
+            {"name": "Priya", "details": {**valid_details, "email": "priya.example.com"}},
+        ]
+
+        for person in invalid_people:
+            with self.subTest(person=person):
+                response = self.client.post("/names", json=person)
+                self.assertEqual(response.status_code, 422)
+
+    def test_update_rejects_invalid_name_age_and_email(self):
+        create_response = self.client.post(
+            "/names",
+            json={
+                "name": "Priya",
+                "details": {
+                    "age": 26,
+                    "city": "Pune",
+                    "email": "priya@example.com",
+                },
+            },
+        )
+        person_id = create_response.json()["id"]
+        invalid_updates = [
+            {"name": "Priya123"},
+            {"details": {"age": 0}},
+            {"details": {"age": 111}},
+            {"details": {"age": "26"}},
+            {"details": {"email": "priya.example.com"}},
+        ]
+
+        for update in invalid_updates:
+            with self.subTest(update=update):
+                response = self.client.put(f"/names/{person_id}", json=update)
+                self.assertEqual(response.status_code, 422)
+
 
 if __name__ == "__main__":
     unittest.main()

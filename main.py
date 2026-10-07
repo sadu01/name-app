@@ -5,31 +5,63 @@ from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
 DATABASE_PATH = os.environ.get("DATABASE_PATH", "people.db")
 
 
 class PersonDetails(BaseModel):
-    age: int
+    age: StrictInt = Field(ge=1, le=110)
     city: str
     email: str
+
+    @field_validator("email")
+    @classmethod
+    def email_must_contain_at(cls, value: str) -> str:
+        if "@" not in value:
+            raise ValueError("Email must contain @")
+        return value
 
 
 class PersonCreate(BaseModel):
     name: str
     details: PersonDetails
 
+    @field_validator("name")
+    @classmethod
+    def name_must_contain_letters_only(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized or any(not character.isalpha() and character != " " for character in normalized):
+            raise ValueError("Name must contain letters and spaces only")
+        return normalized
+
 
 class PersonDetailsUpdate(BaseModel):
-    age: Optional[int] = None
+    age: Optional[StrictInt] = Field(default=None, ge=1, le=110)
     city: Optional[str] = None
     email: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def email_must_contain_at(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and "@" not in value:
+            raise ValueError("Email must contain @")
+        return value
 
 
 class PersonUpdate(BaseModel):
     name: Optional[str] = None
     details: Optional[PersonDetailsUpdate] = None
+
+    @field_validator("name")
+    @classmethod
+    def name_must_contain_letters_only(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = value.strip()
+        if not normalized or any(not character.isalpha() and character != " " for character in normalized):
+            raise ValueError("Name must contain letters and spaces only")
+        return normalized
 
 
 class Person(PersonCreate):

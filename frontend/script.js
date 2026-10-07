@@ -18,6 +18,29 @@ function showError(message) {
     details.textContent = message;
 }
 
+function validateName(name) {
+    if (!/^[\p{L}]+(?: +[\p{L}]+)*$/u.test(name)) {
+        throw new Error("Name must contain letters and spaces only");
+    }
+}
+
+function validateAge(ageInput) {
+    if (!/^\d+$/.test(ageInput)) {
+        throw new Error("Age must contain numbers only");
+    }
+    const age = Number(ageInput);
+    if (!Number.isInteger(age) || age < 1 || age > 110) {
+        throw new Error("Age must be a whole number from 1 to 110");
+    }
+    return age;
+}
+
+function validateEmail(email) {
+    if (!email.includes("@")) {
+        throw new Error("Email must contain @");
+    }
+}
+
 function renderPeople(people) {
     const namesList = document.getElementById("names-list");
     namesList.innerHTML = "";
@@ -117,13 +140,12 @@ async function addPerson() {
     try {
         closeModal();
         const name = await collectField("Name", "Add person name");
+        validateName(name);
         const ageInput = await collectField("Age", "Add person age", "number");
-        const age = Number(ageInput);
-        if (!Number.isInteger(age) || age < 0) {
-            throw new Error("Age must be a valid whole number");
-        }
+        const age = validateAge(ageInput);
         const city = await collectField("City", "Add person city");
         const email = await collectField("Email", "Add person email", "email");
+        validateEmail(email);
 
         const person = { name, details: { age, city, email } };
         const response = await fetch(`${API_URL}/names`, {
@@ -154,13 +176,12 @@ async function updatePerson() {
         }
 
         const name = await collectField("Name", "Enter new name");
+        validateName(name);
         const ageInput = await collectField("Age", "Enter new age", "number");
-        const age = Number(ageInput);
-        if (!Number.isInteger(age) || age < 0) {
-            throw new Error("Age must be a valid whole number");
-        }
+        const age = validateAge(ageInput);
         const city = await collectField("City", "Enter new city");
         const email = await collectField("Email", "Enter new email", "email");
+        validateEmail(email);
 
         const updates = { name, details: { age, city, email } };
         const response = await fetch(`${API_URL}/names/${id}`, {
