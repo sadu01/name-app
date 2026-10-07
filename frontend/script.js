@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:8000";
+const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8000"
+    : "https://sadu-pavan.onrender.com";
 
 const details = document.getElementById("details");
 
