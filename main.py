@@ -1,7 +1,67 @@
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+import json
+import os
+import sqlite3
+from typing import Any, Dict, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+DATABASE_PATH = os.environ.get("DATABASE_PATH", "people.db")
+
+
+class PersonDetails(BaseModel):
+    age: int
+    city: str
+    email: str
+
+
+class PersonCreate(BaseModel):
+    name: str
+    details: PersonDetails
+
+
+class PersonDetailsUpdate(BaseModel):
+    age: Optional[int] = None
+    city: Optional[str] = None
+    email: Optional[str] = None
+
+
+class PersonUpdate(BaseModel):
+    name: Optional[str] = None
+    details: Optional[PersonDetailsUpdate] = None
+
+
+class Person(PersonCreate):
+    id: int
+
+
+def get_connection() -> sqlite3.Connection:
+    connection = sqlite3.connect(DATABASE_PATH)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def init_db() -> None:
+    with get_connection() as connection:
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS people (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                details TEXT NOT NULL
+            )
+            """
+        )
+
+
+def row_to_person(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "details": json.loads(row["details"]),
+    }
+
 
 app = FastAPI()
 app.add_middleware(
@@ -18,62 +78,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-people = [
-    {
-        "id": 1,
-        "name": "Pavan",
-        "details": {
-            "age": 25,
-            "city": "Hyderabad",
-            "email": "pavan@example.com",
-        },
-    },
-    {
-        "id": 2,
-        "name": "Rahul",
-        "details": {
-            "age": 28,
-            "city": "Bangalore",
-            "email": "rahul@example.com",
-        },
-    },
-    {
-        "id": 3,
-        "name": "Suresh",
-        "details": {
-            "age": 30,
-            "city": "Chennai",
-            "email": "suresh@example.com",
-        },
-    },
-    {
-        "id": 4,
-        "name": "Anil",
-        "details": {
-            "age": 22,
-            "city": "Delhi",
-            "email": "anil@example.com",
-        },
-    },
-    {
-        "id": 5,
-        "name": "Vikram",
-        "details": {
-            "age": 27,
-            "city": "Mumbai",
-            "email": "vikram@example.com",
-        },
-    },
-    {
-        "id": 6,
-        "name": "Ramesh",
-        "details": {
-            "age": 29,
-            "city": "Kolkata",
-            "email": "ramesh@example.com",
-        },
-    }
-]
+init_db()
 
 
 @app.get("/")
@@ -83,44 +88,78 @@ def home():
 
 @app.get("/names")
 def get_names():
-    return people
+    with get_connection() as connection:
+        rows = connection.execute(
+            "SELECT id, name, details FROM people ORDER BY id"
+        ).fetchall()
+    return [row_to_person(row) for row in rows]
 
 
 @app.get("/names/{name_id}")
 def get_name_by_id(name_id: int):
-    for person in people:
-        if person["id"] == name_id:
-            return person
-    return {"error": "Name not found"}
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT id, name, details FROM people WHERE id = ?",
+            (name_id,),
+        ).fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Name not found")
+    return row_to_person(row)
 
 
-@app.post("/names")
-def add_name(name: str, details: dict):
-    new_id = max(person["id"] for person in people) + 1
-    new_person = {"id": new_id, "name": name, "details": details}
-    people.append(new_person)
-    return new_person
+@app.post("/names", status_code=201)
+def add_name(person: PersonCreate):
+    with get_connection() as connection:
+        cursor = connection.execute(
+            "INSERT INTO people (name, details) VALUES (?, ?)",
+            (person.name, json.dumps(person.details.model_dump())),
+        )
+        person_id = cursor.lastrowid
+
+    return {"id": person_id, "name": person.name, "details": person.details.model_dump()}
 
 
 @app.put("/names/{name_id}")
-def update_name_by_id(name_id: int, name: Optional[str] = None, details: Optional[dict] = None):
-    for person in people:
-        if person["id"] == name_id:
-            if name is not None:
-                person["name"] = name
-            if details is not None:
-                person["details"] = details
-            return person
-    return {"error": "Name not found"}
+def update_name_by_id(name_id: int, person: PersonUpdate):
+    with get_connection() as connection:
+        existing = connection.execute(
+            "SELECT id, name, details FROM people WHERE id = ?",
+            (name_id,),
+        ).fetchone()
+        if existing is None:
+            raise HTTPException(status_code=404, detail="Name not found")
+
+        updated_name = person.name if person.name is not None else existing["name"]
+        current_details = json.loads(existing["details"])
+        updated_details = current_details.copy()
+
+        if person.details is not None:
+            for field, value in person.details.model_dump().items():
+                if value is not None:
+                    updated_details[field] = value
+
+        connection.execute(
+            "UPDATE people SET name = ?, details = ? WHERE id = ?",
+            (updated_name, json.dumps(updated_details), name_id),
+        )
+
+    return {"id": name_id, "name": updated_name, "details": updated_details}
 
 
 @app.delete("/names/{name_id}")
-def delete_name_by_id(name_id: int, name: Optional[str] = None, details: Optional[dict] = None):
-    for index, person in enumerate(people):
-        if person["id"] == name_id:
-            deleted_person = people.pop(index)
-            return {"message": f"Name with id {name_id} deleted successfully.", "deleted": deleted_person}
-    return {"error": "Name not found"}
+def delete_name_by_id(name_id: int):
+    with get_connection() as connection:
+        existing = connection.execute(
+            "SELECT id, name, details FROM people WHERE id = ?",
+            (name_id,),
+        ).fetchone()
+        if existing is None:
+            raise HTTPException(status_code=404, detail="Name not found")
+
+        connection.execute("DELETE FROM people WHERE id = ?", (name_id,))
+
+    return {"message": "Name deleted successfully", "deleted": row_to_person(existing)}
 
 
 if __name__ == "__main__":

@@ -1,22 +1,271 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Name Details</title>
+    <title>People Manager</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --background: #f3f6fb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #64748b;
+            --border: #dbe3ee;
+            --danger: #dc2626;
+            --shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background: linear-gradient(135deg, #eef4ff 0%, var(--background) 100%);
+        }
+
+        .container {
+            width: min(1200px, calc(100% - 32px));
+            margin: 0 auto;
+        }
+
+        .header {
+            padding: 28px 0 18px;
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            color: #fff;
+            background: var(--primary);
+        }
+
+        .status {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .main {
+            padding: 32px 0 48px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1.05fr 1.95fr;
+            gap: 24px;
+        }
+
+        .panel {
+            padding: 24px;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: var(--card);
+            box-shadow: var(--shadow);
+        }
+
+        .panel h2 {
+            margin: 0 0 18px;
+            font-size: 1.2rem;
+        }
+
+        .action-grid {
+            display: grid;
+            gap: 18px;
+        }
+
+        .action-button,
+        .primary-button,
+        .danger-button {
+            border: 0;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .primary-button {
+            color: #fff;
+            background: var(--primary);
+        }
+
+        .primary-button:hover { background: var(--primary-dark); }
+
+        .danger-button {
+            color: #fff;
+            background: var(--danger);
+        }
+
+        .danger-button:hover { filter: brightness(0.9); }
+
+        .action-button {
+            color: var(--primary);
+            background: #e8f0ff;
+        }
+
+        .action-button:hover { background: #dfeaff; }
+
+        .list {
+            display: grid;
+            gap: 10px;
+            margin-top: 18px;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+
+        .person-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        .person-name {
+            flex: 1;
+            text-align: left;
+            border: 0;
+            background: transparent;
+            color: var(--text);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .details {
+            min-height: 200px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #f8fafc;
+            color: var(--muted);
+        }
+
+        .details p {
+            margin: 8px 0;
+            color: var(--text);
+        }
+
+        .details strong { color: var(--primary); }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .modal.visible { display: flex; }
+
+        .modal-content {
+            width: min(420px, 100%);
+            padding: 24px;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-content h3 { margin-top: 0; }
+        .modal-content input {
+            width: 100%;
+            margin: 12px 0;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        @media (max-width: 820px) {
+            .dashboard { grid-template-columns: 1fr; }
+            .header-content { align-items: flex-start; flex-direction: column; }
+        }
+    </style>
 </head>
 
 <body>
+    <header class="header">
+        <div class="container header-content">
+            <div class="brand">
+                <div class="brand-mark">P</div>
+                <span>People Manager</span>
+            </div>
+        </div>
+    </header>
 
-    <h1>Names</h1>
+    <main class="container main">
+        <div class="dashboard">
+            <section class="panel">
+                <h2>Manage People</h2>
+                <div class="action-grid">
+                    <button id="add-name-button" class="primary-button" type="button">Add Name</button>
+                    <button id="update-person-button" class="action-button" type="button">Update Person</button>
+                </div>
 
-    <div id="names-list"></div>
+                <div class="action-grid" style="margin-top: 24px;">
+                    <form id="get-form">
+                        <input name="id" type="number" placeholder="Enter person ID" required style="width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px;">
+                        <button class="primary-button" type="submit" style="width: 100%;">Get Details</button>
+                    </form>
+                    <form id="delete-form">
+                        <input name="id" type="number" placeholder="Enter person ID" required style="width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px;">
+                        <button class="danger-button" type="submit" style="width: 100%;">Delete Person</button>
+                    </form>
+                </div>
+            </section>
 
-    <h2>Details</h2>
+            <section class="panel">
+                <h2>People List</h2>
+                <div id="names-list" class="list"></div>
+                <h2 style="margin-top: 24px;">Details</h2>
+                <div id="details" class="details">Select a person to see their details.</div>
+            </section>
+        </div>
+    </main>
 
-    <div id="details">
-        Select a name to see details.
+    <div id="field-modal" class="modal" aria-hidden="true">
+        <div class="modal-content">
+            <h3 id="modal-title">Enter information</h3>
+            <p id="modal-instruction">Enter the next value.</p>
+            <input id="modal-input" type="text" autocomplete="off">
+            <div class="modal-actions">
+                <button id="modal-cancel" type="button" class="action-button">Cancel</button>
+                <button id="modal-next" type="button" class="primary-button">Next</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
-
 </body>
 </html>
