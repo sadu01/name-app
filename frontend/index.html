@@ -1,271 +1,271 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>People Manager</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --background: #f3f6fb;
-            --card: #ffffff;
-            --text: #1f2937;
-            --muted: #64748b;
-            --border: #dbe3ee;
-            --danger: #dc2626;
-            --shadow: 0 12px 30px rgba(37, 99, 235, 0.12);
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: Arial, sans-serif;
-            color: var(--text);
-            background: linear-gradient(135deg, #eef4ff 0%, var(--background) 100%);
-        }
-
-        .container {
-            width: min(1200px, calc(100% - 32px));
-            margin: 0 auto;
-        }
-
-        .header {
-            padding: 28px 0 18px;
-            background: #fff;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .brand-mark {
-            width: 42px;
-            height: 42px;
-            display: grid;
-            place-items: center;
-            border-radius: 12px;
-            color: #fff;
-            background: var(--primary);
-        }
-
-        .status {
-            color: var(--muted);
-            font-size: 0.9rem;
-        }
-
-        .main {
-            padding: 32px 0 48px;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1.05fr 1.95fr;
-            gap: 24px;
-        }
-
-        .panel {
-            padding: 24px;
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            background: var(--card);
-            box-shadow: var(--shadow);
-        }
-
-        .panel h2 {
-            margin: 0 0 18px;
-            font-size: 1.2rem;
-        }
-
-        .action-grid {
-            display: grid;
-            gap: 18px;
-        }
-
-        .action-button,
-        .primary-button,
-        .danger-button {
-            border: 0;
-            border-radius: 10px;
-            padding: 12px 16px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .primary-button {
-            color: #fff;
-            background: var(--primary);
-        }
-
-        .primary-button:hover { background: var(--primary-dark); }
-
-        .danger-button {
-            color: #fff;
-            background: var(--danger);
-        }
-
-        .danger-button:hover { filter: brightness(0.9); }
-
-        .action-button {
-            color: var(--primary);
-            background: #e8f0ff;
-        }
-
-        .action-button:hover { background: #dfeaff; }
-
-        .list {
-            display: grid;
-            gap: 10px;
-            margin-top: 18px;
-            max-height: 480px;
-            overflow-y: auto;
-        }
-
-        .person-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 8px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-        }
-
-        .person-name {
-            flex: 1;
-            text-align: left;
-            border: 0;
-            background: transparent;
-            color: var(--text);
-            font-size: 1rem;
-            cursor: pointer;
-        }
-
-        .details {
-            min-height: 200px;
-            padding: 20px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: #f8fafc;
-            color: var(--muted);
-        }
-
-        .details p {
-            margin: 8px 0;
-            color: var(--text);
-        }
-
-        .details strong { color: var(--primary); }
-
-        .modal {
-            position: fixed;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            background: rgba(15, 23, 42, 0.6);
-        }
-
-        .modal.visible { display: flex; }
-
-        .modal-content {
-            width: min(420px, 100%);
-            padding: 24px;
-            border-radius: 16px;
-            background: #fff;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
-        }
-
-        .modal-content h3 { margin-top: 0; }
-        .modal-content input {
-            width: 100%;
-            margin: 12px 0;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-        }
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        @media (max-width: 820px) {
-            .dashboard { grid-template-columns: 1fr; }
-            .header-content { align-items: flex-start; flex-direction: column; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Team India – Road to World Cup 2027. Read cricket analysis, previews, player profiles, fixtures and tournament insights.">
+  <title>Team India – Road to World Cup 2027</title>
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230b3a8c'/%3E%3Ccircle cx='32' cy='32' r='20' fill='%23f4c430'/%3E%3Cpath d='M32 16l5.5 11 12 .5-9.6 7.2 3.7 11.8L32 1.5 20.4 46.5l3.7-11.8L12.5 27.5l12-.5L32 16z' fill='%230b3a8c'/%3E%3C/svg%3E">
 </head>
-
 <body>
-    <header class="header">
-        <div class="container header-content">
-            <div class="brand">
-                <div class="brand-mark">P</div>
-                <span>People Manager</span>
-            </div>
-        </div>
-    </header>
-
-    <main class="container main">
-        <div class="dashboard">
-            <section class="panel">
-                <h2>Manage People</h2>
-                <div class="action-grid">
-                    <button id="add-name-button" class="primary-button" type="button">Add Name</button>
-                    <button id="update-person-button" class="action-button" type="button">Update Person</button>
-                </div>
-
-                <div class="action-grid" style="margin-top: 24px;">
-                    <form id="get-form">
-                        <input name="id" type="number" placeholder="Enter person ID" required style="width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px;">
-                        <button class="primary-button" type="submit" style="width: 100%;">Get Details</button>
-                    </form>
-                    <form id="delete-form">
-                        <input name="id" type="number" placeholder="Enter person ID" required style="width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px;">
-                        <button class="danger-button" type="submit" style="width: 100%;">Delete Person</button>
-                    </form>
-                </div>
-            </section>
-
-            <section class="panel">
-                <h2>People List</h2>
-                <div id="names-list" class="list"></div>
-                <h2 style="margin-top: 24px;">Details</h2>
-                <div id="details" class="details">Select a person to see their details.</div>
-            </section>
-        </div>
-    </main>
-
-    <div id="field-modal" class="modal" aria-hidden="true">
-        <div class="modal-content">
-            <h3 id="modal-title">Enter information</h3>
-            <p id="modal-instruction">Enter the next value.</p>
-            <input id="modal-input" type="text" autocomplete="off">
-            <div class="modal-actions">
-                <button id="modal-cancel" type="button" class="action-button">Cancel</button>
-                <button id="modal-next" type="button" class="primary-button">Next</button>
-            </div>
-        </div>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="#top" class="brand" aria-label="Team India home">
+        <img class="brand-flag" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 48'%3E%3Crect width='72' height='48' fill='%23FF9933'/%3E%3Crect y='16' width='72' height='16' fill='%23FFFFFF'/%3E%3Crect y='32' width='72' height='16' fill='%2313883C'/%3E%3Ccircle cx='36' cy='24' r='6' fill='%230D2C7F'/%3E%3Ccircle cx='36' cy='24' r='2.5' fill='%23FFFFFF'/%3E%3Cpath d='M36 18l1.15 2.85 3.1.18-2.45 2.08 1 3.03-2.8-1.82-2.8 1.82 1-3.03-2.45-2.08 3.1-.18L36 18z' fill='%230D2C7F'/%3E%3C/svg%3E" alt="" aria-hidden="true">
+        <span>Team India</span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="#top" class="active">Home</a>
+        <a href="#blogs">Blogs</a>
+        <a href="#players">Players</a>
+        <a href="#schedule">Schedule</a>
+        <a href="#about">About</a>
+      </nav>
+      <a href="#blogs" class="header-button">Latest Blogs</a>
     </div>
+  </header>
 
-    <script src="script.js"></script>
+  <main id="top">
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <p class="eyebrow">ICC World Cup 2027 · South Africa, Zimbabwe, Namibia</p>
+          <h1>India's Journey to World Cup 2027</h1>
+          <p class="hero-text">Follow the road to the biggest cricket tournament of 2027 with expert analysis, player stories, tactical previews, and tournament information.</p>
+          <div class="hero-actions">
+            <a href="#blogs" class="primary-button">Explore Blogs</a>
+            <a href="#schedule" class="secondary-button">View Schedule</a>
+          </div>
+          <ul class="hero-facts" aria-label="Tournament highlights">
+            <li><strong>14 teams</strong><span>Super Series & Group Stage</span></li>
+            <li><strong>Oct 2–Nov 21</strong><span>World Cup dates</span></li>
+            <li><strong>3 hosts</strong><span>South Africa, Zimbabwe, Namibia</span></li>
+          </ul>
+        </div>
+        <div class="hero-visual" aria-label="Indian cricket team celebrating">
+          <img src="images/cricket-hero.webp" alt="Cricket bat and ball">
+        </div>
+      </div>
+    </section>
+
+    <section class="tournament-bar" aria-label="World Cup key information">
+      <div class="container tournament-grid">
+        <article><span class="label">Tournament</span><strong>ICC Men's Cricket World Cup 2027</strong></article>
+        <article><span class="label">Format</span><strong>14 Teams · Super Series · Super 7</strong></article>
+        <article><span class="label">India vs Australia</span><strong>October 7, 2027 · Cape Town</strong></article>
+        <article><span class="label">India vs Pakistan</span><strong>October 10, 2027 · Johannesburg</strong></article>
+      </div>
+    </section>
+
+    <section id="blogs" class="news-section">
+      <div class="container section-heading">
+        <div>
+          <p class="eyebrow dark">Latest analysis</p>
+          <h2>Road to World Cup 2027</h2>
+        </div>
+      </div>
+      <div class="container">
+        <div id="blogCount" class="blog-count" aria-live="polite">0 articles</div>
+        <div id="blogGrid" class="blog-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="players" class="feature-section">
+      <div class="container section-heading compact">
+        <div>
+          <p class="eyebrow dark">Predicted selection</p>
+          <h2>India's Predicted Playing XI – World Cup 2027</h2>
+          <p class="selection-note">This lineup is a prediction and not an officially selected team.</p>
+        </div>
+      </div>
+      <div class="container player-grid">
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/c/cc/Rohit_Gurunath_Sharma.jpg" alt="Rohit Sharma" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 fill=%27white%27 font-size=%2748%27 font-family=%27Arial%27%3ERohit Sharma%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">1</span>
+          <h3>Rohit Sharma</h3>
+          <p class="player-role">Opening Batsman</p>
+          <p>India's most dynamic opener, Rohit combines explosive powerplay starts with calm leadership and a proven record in major tournaments.</p>
+          <a class="player-profile" href="player-profile.html?player=rohit-sharma">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/3/34/Shubman_Gill_2023_%28cropped%29.jpg" alt="Shubman Gill" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EShubman Gill%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">2</span>
+          <h3>Shubman Gill</h3>
+          <p class="player-role">Opening Batsman</p>
+          <p>A technically crisp opener, Gill brings elegant stroke play, long-term consistency, and the ability to control the innings from the top.</p>
+          <a class="player-profile" href="player-profile.html?player=shubman-gill">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/7/7e/Virat_Kohli.jpg" alt="Virat Kohli" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EVirat Kohli%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">3</span>
+          <h3>Virat Kohli</h3>
+          <p class="player-role">Top-Order Batsman</p>
+          <p>Kohli's experience, technical discipline, and match-winning temperament make him a central figure in any World Cup campaign.</p>
+          <a class="player-profile" href="player-profile.html?player=virat-kohli">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/9/96/Shreyas_Iyer_2021.jpg" alt="Shreyas Iyer" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EShreyas Iyer%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">4</span>
+          <h3>Shreyas Iyer</h3>
+          <p class="player-role">Middle-Order Batsman</p>
+          <p>Iyer adds power, composure, and adaptability in the middle order, especially when India need to accelerate under pressure.</p>
+          <a class="player-profile" href="player-profile.html?player=shreyas-iyer">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/0/08/K.L._Rahul_%281%29.jpg" alt="KL Rahul" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EKL Rahul%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">5</span>
+          <h3>KL Rahul</h3>
+          <p class="player-role">Wicketkeeper-Batsman</p>
+          <p>Rahul offers flexibility behind the stumps and a reliable batting option capable of anchoring or accelerating as required.</p>
+          <a class="player-profile" href="player-profile.html?player=kl-rahul">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Hardik_Pandya_%28cropped_2%29.jpg" alt="Hardik Pandya" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EHardik Pandya%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">6</span>
+          <h3>Hardik Pandya</h3>
+          <p class="player-role">All-Rounder</p>
+          <p>Pandya's finishing ability, seam bowling, and fearless approach provide India with a game-changing balance option.</p>
+          <a class="player-profile" href="player-profile.html?player=hardik-pandya">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/b/b1/Ravindra_Jadeja_in_2018.jpg" alt="Ravindra Jadeja" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3ERavindra Jadeja%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">7</span>
+          <h3>Ravindra Jadeja</h3>
+          <p class="player-role">All-Rounder</p>
+          <p>Jadeja adds elite fielding, control with the ball, and the ability to influence matches in both the middle overs and the closing stages.</p>
+          <a class="player-profile" href="player-profile.html?player=ravindra-jadeja">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/d/d9/Axar_Patel_2.jpg" alt="Axar Patel" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EAxar Patel%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">8</span>
+          <h3>Axar Patel</h3>
+          <p class="player-role">Spin All-Rounder</p>
+          <p>Patel offers left-arm spin, lower-order batting depth, and the ability to keep India balanced across all conditions.</p>
+          <a class="player-profile" href="player-profile.html?player=axar-patel">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Kuldeep_Yadav.jpg" alt="Kuldeep Yadav" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EKuldeep Yadav%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">9</span>
+          <h3>Kuldeep Yadav</h3>
+          <p class="player-role">Spin Bowler</p>
+          <p>Kuldeep's wicket-taking variety and ability to turn matches make him a major threat in the middle overs.</p>
+          <a class="player-profile" href="player-profile.html?player=kuldeep-yadav">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/1/1f/Jasprit_Bumrah_%282%29.jpg" alt="Jasprit Bumrah" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EJasprit Bumrah%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">10</span>
+          <h3>Jasprit Bumrah</h3>
+          <p class="player-role">Fast Bowler</p>
+          <p>Bumrah's precision, pace, and control give India a world-class match-winning option in every phase of the innings.</p>
+          <a class="player-profile" href="player-profile.html?player=jasprit-bumrah">View Profile</a>
+        </article>
+        <article class="player-card">
+          <img class="player-photo" src="https://upload.wikimedia.org/wikipedia/commons/8/80/Bhuvneshwar_Kumar.jpg" alt="Bhuvneshwar Kumar" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 800 1000%27%3E%3Crect width=%27800%27 height=%271000%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 fill=%27white%27 text-anchor=%27middle%27 font-size=%2748%27 font-family=%27Arial%27%3EBhuvneshwar Kumar%3C/text%3E%3C/svg%3E';">
+          <span class="player-number">11</span>
+          <h3>Bhuvneshwar Kumar</h3>
+          <p class="player-role">Medium-Fast Bowler</p>
+          <p>Bhuvi brings swing, discipline, and experienced leadership with the ball, making him an ideal support option for the pace attack.</p>
+          <a class="player-profile" href="player-profile.html?player=bhuvneshwar-kumar">View Profile</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="schedule" class="schedule-section">
+      <div class="container section-heading compact">
+        <div>
+          <p class="eyebrow dark">Tournament fixtures</p>
+          <h2>Important India fixtures</h2>
+        </div>
+      </div>
+      <div class="container schedule-table-wrap">
+        <table class="schedule-table">
+          <thead><tr><th>Date</th><th>Opposition</th><th>Venue</th><th>Match</th></tr></thead>
+          <tbody>
+            <tr><td>October 7, 2027</td><td>Australia</td><td>Cape Town</td><td>League stage</td></tr>
+            <tr><td>October 10, 2027</td><td>Pakistan</td><td>Johannesburg</td><td>League stage</td></tr>
+            <tr><td>October 2–November 21, 2027</td><td>14 teams</td><td>South Africa, Zimbabwe, Namibia</td><td>World Cup</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="about" class="about-section">
+      <div class="container about-grid">
+        <div>
+          <p class="eyebrow dark">About this site</p>
+          <h2>Independent coverage of India's World Cup campaign.</h2>
+          <p>Team India – Road to World Cup 2027 brings together cricket analysis, player profiles, tournament context, and match previews. Articles distinguish confirmed facts, predictions, and opinion so readers can follow the campaign with clarity.</p>
+          <p>Information about the tournament is based on the official ICC event information: hosts South Africa, Zimbabwe and Namibia; dates October 2 to November 21, 2027; and the 14-team tournament format.</p>
+        </div>
+        <div class="about-card">
+          <strong>Official tournament information</strong>
+          <a href="https://www.icc-cricket.com/" target="_blank" rel="noreferrer">ICC Cricket World Cup</a>
+          <p>Use the official event page for the latest schedule, team announcements, and tournament updates.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="contact-section">
+      <div class="container contact-grid">
+        <div>
+          <p class="eyebrow dark">Stay connected</p>
+          <h2>Contact Team India Cricket Blog</h2>
+          <p>Have questions, suggestions, or feedback about Indian cricket? We'd love to hear from you!</p>
+        </div>
+        <div class="contact-card">
+          <p><strong>Email:</strong> <a href="mailto:contact@example.com">contact@example.com</a></p>
+          <p><strong>Location:</strong> India</p>
+          <p><strong>Response time:</strong> We aim to reply within two working days.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-branding">
+        <a href="#top" class="brand footer-brand" aria-label="Return to top"><span class="brand-mark" aria-hidden="true">🇮🇳</span><span>Team India – Road to World Cup 2027</span></a>
+        <p>Independent cricket analysis and tournament coverage.</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">Instagram</a>
+        <a href="https://www.x.com/" target="_blank" rel="noreferrer">X</a>
+        <a href="https://www.youtube.com/" target="_blank" rel="noreferrer">YouTube</a>
+      </div>
+      <p>© 2026 Team India Cricket Blog. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="blogs.js"></script>
+  <script src="script.js"></script>
+  <script>
+    window.addEventListener('load', () => {
+      if (typeof window.initializeBlogApp === 'function') {
+        window.initializeBlogApp();
+      } else if (window.blogs && window.blogs.length) {
+        const grid = document.getElementById('blogGrid');
+        const count = document.getElementById('blogCount');
+        if (grid && count) {
+          count.textContent = `${window.blogs.length} articles`;
+          grid.innerHTML = window.blogs.map(blog => `
+            <article class="blog-card">
+              <div class="blog-card-image">
+                <img src="${blog.image}" alt="${blog.title}" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 1200 800%27%3E%3Crect width=%271200%27 height=%27800%27 fill=%230b3a8c%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 text-anchor=%27middle%27 fill=%27white%27 font-size=%2746%27 font-family=%27Arial%27%3EIndia Cricket%3C/text%3E%3C/svg%3E';">
+              </div>
+              <div class="blog-card-content">
+                <span class="category">${blog.category}</span>
+                <h3>${blog.title}</h3>
+                <p>${blog.description}</p>
+                <div class="blog-meta"><span>${blog.author}</span><span>•</span><span>${blog.date}</span></div>
+                <a class="card-button" href="blog.html?id=${blog.id}">Read More</a>
+              </div>
+            </article>
+          `).join('');
+        }
+      }
+    });
+  </script>
 </body>
 </html>

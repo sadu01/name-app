@@ -1,262 +1,145 @@
-const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-    ? "http://localhost:8000"
-    : "https://sadu-pavan.onrender.com";
+const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'%3E%3Crect width='1200' height='800' fill='%230b3a8c'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='white' font-size='46' font-family='Arial'%3EIndia Cricket%3C/text%3E%3C/svg%3E";
 
-const details = document.getElementById("details");
+const articleGrid = document.getElementById('blogGrid');
+const articleCount = document.getElementById('blogCount');
+const articleContent = document.getElementById('articleContent');
+const relatedArticles = document.getElementById('relatedArticles');
+const backToBlogs = document.getElementById('backToBlogs');
 
-function showDetails(person) {
-    details.innerHTML = `
-        <p><strong>ID:</strong> ${person.id}</p>
-        <p><strong>Name:</strong> ${person.name}</p>
-        <p><strong>Age:</strong> ${person.details.age}</p>
-        <p><strong>City:</strong> ${person.details.city}</p>
-        <p><strong>Email:</strong> ${person.details.email}</p>
+const blogArticles = Array.isArray(window.blogs) ? window.blogs : [];
+
+function safeImage(image, title, className = '') {
+  const img = document.createElement('img');
+  img.src = image;
+  img.alt = title;
+  img.loading = 'lazy';
+  img.className = className;
+  img.onerror = () => {
+    img.src = fallbackImage;
+    img.alt = `${title} image unavailable`;
+  };
+  return img;
+}
+
+function renderContentParagraph(paragraph, index, total) {
+  if (index === total - 1) {
+    return `<div class="key-takeaway"><strong>Key takeaway:</strong> ${paragraph}</div>`;
+  }
+
+  if (paragraph.startsWith('### ')) {
+    return `<h2>${paragraph.replace(/^###\s+/, '')}</h2>`;
+  }
+
+  if (paragraph.startsWith('## ')) {
+    return `<h2>${paragraph.replace(/^##\s+/, '')}</h2>`;
+  }
+
+  return `<p>${paragraph}</p>`;
+}
+
+function formatArticle(blog) {
+  return `
+    <div class="article-image-wrap">
+      ${safeImage(blog.image, blog.title).outerHTML}
+      <div class="image-credit">Image: ${blog.imageAuthor || 'Wikimedia Commons'} • ${blog.imageLicense || 'License details on Commons'} • <a href="${blog.imageSource || 'https://commons.wikimedia.org/'}" target="_blank" rel="noopener noreferrer">View source</a></div>
+    </div>
+    <div class="article-text">
+      <p class="eyebrow dark">${blog.category}</p>
+      <h1>${blog.title}</h1>
+      <div class="article-meta">
+        <span><strong>By</strong> ${blog.author}</span>
+        <span>•</span>
+        <span>${blog.date}</span>
+      </div>
+      ${blog.content.map((paragraph, index) => renderContentParagraph(paragraph, index, blog.content.length)).join('')}
+    </div>
+  `;
+}
+
+function renderCards() {
+  articleGrid.innerHTML = '';
+  articleCount.textContent = `${blogArticles.length} article${blogArticles.length === 1 ? '' : 's'}`;
+
+  blogArticles.forEach(blog => {
+    const card = document.createElement('article');
+    card.className = 'blog-card';
+    card.innerHTML = `
+      <div class="blog-card-image">
+        ${safeImage(blog.image, blog.title).outerHTML}
+      </div>
+      <div class="blog-card-content">
+        <span class="category">${blog.category}</span>
+        <h3>${blog.title}</h3>
+        <p>${blog.description}</p>
+        <div class="blog-meta">
+          <span>${blog.author}</span>
+          <span>•</span>
+          <span>${blog.date}</span>
+        </div>
+        <a class="card-button" href="blog.html?id=${blog.id}">Read More</a>
+      </div>
     `;
+    articleGrid.appendChild(card);
+  });
 }
 
-function showError(message) {
-    details.textContent = message;
+function renderHomePage() {
+  if (!articleGrid || !articleCount) return;
+  renderCards();
 }
 
-function validateName(name) {
-    if (!/^[\p{L}]+(?: +[\p{L}]+)*$/u.test(name)) {
-        throw new Error("Name must contain letters and spaces only");
-    }
+function renderRelatedArticles(currentId) {
+  const related = blogArticles.filter(blog => blog.id !== currentId).slice(0, 3);
+  relatedArticles.innerHTML = '';
+
+  related.forEach(blog => {
+    const card = document.createElement('article');
+    card.className = 'related-card';
+    card.innerHTML = `
+      <div class="related-card-image">
+        ${safeImage(blog.image, blog.title).outerHTML}
+      </div>
+      <div class="related-card-body">
+        <h3>${blog.title}</h3>
+        <p>${blog.category}</p>
+      </div>
+    `;
+    const link = document.createElement('a');
+    link.href = `blog.html?id=${blog.id}`;
+    link.setAttribute('aria-label', `Read ${blog.title}`);
+    link.appendChild(card);
+    relatedArticles.appendChild(link);
+  });
 }
 
-function validateAge(ageInput) {
-    if (!/^\d+$/.test(ageInput)) {
-        throw new Error("Age must contain numbers only");
-    }
-    const age = Number(ageInput);
-    if (!Number.isInteger(age) || age < 1 || age > 110) {
-        throw new Error("Age must be a whole number from 1 to 110");
-    }
-    return age;
+function renderBlogPage() {
+  if (!articleContent) return;
+  const params = new URLSearchParams(window.location.search);
+  const id = Number(params.get('id'));
+  const blog = window.findBlogById(id);
+
+  if (!blog) {
+    articleContent.innerHTML = '<div class="article-text"><h1>Article not found</h1><p>The requested article may have been moved or no longer exists.</p><a class="card-button" href="index.html#blogs">Return to blogs</a></div>';
+    return;
+  }
+
+  articleContent.innerHTML = formatArticle(blog);
+  renderRelatedArticles(blog.id);
+  if (backToBlogs) backToBlogs.href = `index.html#blogs`;
 }
 
-function validateCity(city) {
-    if (!/^[\p{L}]+(?: +[\p{L}]+)*$/u.test(city)) {
-        throw new Error("City must contain letters and spaces only");
-    }
+function initializeBlogApp() {
+  if (window.__blogAppInitialized) return;
+  window.__blogAppInitialized = true;
+
+  if (articleGrid) renderHomePage();
+  if (articleContent) renderBlogPage();
 }
 
-function validateEmail(email) {
-    if (!email.includes("@")) {
-        throw new Error("Email must contain @");
-    }
+window.initializeBlogApp = initializeBlogApp;
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeBlogApp, { once: true });
+} else {
+  initializeBlogApp();
 }
-
-function renderPeople(people) {
-    const namesList = document.getElementById("names-list");
-    namesList.innerHTML = "";
-
-    people.forEach(person => {
-        const row = document.createElement("div");
-
-        const getButton = document.createElement("button");
-        getButton.textContent = person.name;
-        getButton.onclick = () => getPerson(person.id);
-
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "Delete";
-        deleteButton.onclick = () => deletePerson(person.id);
-
-        row.append(getButton, deleteButton);
-        namesList.appendChild(row);
-    });
-}
-
-function getNames() {
-    fetch(`${API_URL}/names`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Unable to load people");
-            }
-            return response.json();
-        })
-        .then(people => {
-            renderPeople(people);
-        })
-        .catch(error => {
-            showError(error.message);
-        });
-}
-
-function getPerson(id) {
-    fetch(`${API_URL}/names/${id}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Person not found");
-            }
-            return response.json();
-        })
-        .then(showDetails)
-        .catch(error => showError(error.message));
-}
-
-const modal = document.getElementById("field-modal");
-const modalTitle = document.getElementById("modal-title");
-const modalInstruction = document.getElementById("modal-instruction");
-const modalInput = document.getElementById("modal-input");
-const modalNext = document.getElementById("modal-next");
-const modalCancel = document.getElementById("modal-cancel");
-
-let modalCallback = null;
-let modalValues = null;
-
-function openModal({ title, instruction, inputType = "text", value = "" }) {
-    modalTitle.textContent = title;
-    modalInstruction.textContent = instruction;
-    modalInput.type = inputType;
-    modalInput.value = value;
-    modalInput.focus();
-    modalInput.select();
-    modal.classList.add("visible");
-    modal.setAttribute("aria-hidden", "false");
-}
-
-function closeModal() {
-    modal.classList.remove("visible");
-    modal.setAttribute("aria-hidden", "true");
-    modalInput.value = "";
-}
-
-function collectField(fieldName, label, type = "text", defaultValue = "") {
-    return new Promise((resolve, reject) => {
-        modalCallback = value => {
-            const currentValue = String(value ?? "").trim();
-            if (currentValue === "") {
-                reject(new Error(`${fieldName} is required`));
-                return;
-            }
-            resolve(currentValue);
-        };
-
-        openModal({
-            title: label,
-            instruction: `Enter ${fieldName.toLowerCase()}:`,
-            inputType: type,
-            value: defaultValue,
-        });
-    });
-}
-
-async function addPerson() {
-    try {
-        closeModal();
-        const name = await collectField("Name", "Add person name");
-        validateName(name);
-        const ageInput = await collectField("Age", "Add person age", "number");
-        const age = validateAge(ageInput);
-        const city = await collectField("City", "Add person city");
-        validateCity(city);
-        const email = await collectField("Email", "Add person email", "email");
-        validateEmail(email);
-
-        const person = { name, details: { age, city, email } };
-        const response = await fetch(`${API_URL}/names`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(person),
-        });
-
-        if (!response.ok) {
-            throw new Error("Unable to add person");
-        }
-
-        const createdPerson = await response.json();
-        showDetails(createdPerson);
-        getNames();
-    } catch (error) {
-        showError(error.message);
-    }
-}
-
-async function updatePerson() {
-    try {
-        closeModal();
-        const idInput = await collectField("Person ID", "Update person ID", "number");
-        const id = Number(idInput);
-        if (!Number.isInteger(id) || id < 1) {
-            throw new Error("Enter a valid person ID");
-        }
-
-        const name = await collectField("Name", "Enter new name");
-        validateName(name);
-        const ageInput = await collectField("Age", "Enter new age", "number");
-        const age = validateAge(ageInput);
-        const city = await collectField("City", "Enter new city");
-        validateCity(city);
-        const email = await collectField("Email", "Enter new email", "email");
-        validateEmail(email);
-
-        const updates = { name, details: { age, city, email } };
-        const response = await fetch(`${API_URL}/names/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) {
-            throw new Error("Unable to update person");
-        }
-
-        const updatedPerson = await response.json();
-        showDetails(updatedPerson);
-        getNames();
-    } catch (error) {
-        showError(error.message);
-    }
-}
-
-function deletePerson(id) {
-    fetch(`${API_URL}/names/${id}`, { method: "DELETE" })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Unable to delete person");
-            }
-            return response.json();
-        })
-        .then(() => {
-            showError(`Person ${id} deleted.`);
-            getNames();
-        })
-        .catch(error => showError(error.message));
-}
-
-modalNext.addEventListener("click", () => {
-    if (modalCallback) {
-        modalCallback(modalInput.value);
-        closeModal();
-        modalCallback = null;
-    }
-});
-
-modalCancel.addEventListener("click", () => {
-    closeModal();
-    modalCallback = null;
-});
-
-modalInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        modalNext.click();
-    }
-    if (event.key === "Escape") {
-        modalCancel.click();
-    }
-});
-
-document.getElementById("add-name-button").addEventListener("click", addPerson);
-document.getElementById("get-form").addEventListener("submit", event => {
-    event.preventDefault();
-    getPerson(event.currentTarget.id.value);
-});
-document.getElementById("update-person-button").addEventListener("click", updatePerson);
-document.getElementById("delete-form").addEventListener("submit", event => {
-    event.preventDefault();
-    deletePerson(event.currentTarget.id.value);
-});
-
-getNames();
