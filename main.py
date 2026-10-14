@@ -1,134 +1,131 @@
-import json
-import os
-import sqlite3
-from typing import Any, Dict, Optional
+from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, StrictInt, field_validator
+from pydantic import BaseModel, EmailStr, field_validator
+from sqlalchemy import Column, DateTime, Integer, String, func, text
+from sqlalchemy.orm import Session
 
-DATABASE_PATH = os.environ.get("DATABASE_PATH", "people.db")
+from database import Base, engine, get_db
 
 
-class PersonDetails(BaseModel):
-    age: StrictInt = Field(ge=1, le=110)
+class BlogCreate(BaseModel):
+    title: str
+    description: str
     city: str
-    email: str
+    email: EmailStr
+    author: str
 
-    @field_validator("city")
+    @field_validator("title", "city", "author")
     @classmethod
-    def city_must_contain_letters_only(cls, value: str) -> str:
+    def must_contain_letters_only(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized or any(not character.isalpha() and character != " " for character in normalized):
-            raise ValueError("City must contain letters and spaces only")
+            raise ValueError("Only letters and spaces are allowed")
         return normalized
 
-    @field_validator("email")
+    @field_validator("description")
     @classmethod
-    def email_must_contain_at(cls, value: str) -> str:
-        if "@" not in value:
-            raise ValueError("Email must contain @")
-        return value
-
-
-class PersonCreate(BaseModel):
-    name: str
-    details: PersonDetails
-
-    @field_validator("name")
-    @classmethod
-    def name_must_contain_letters_only(cls, value: str) -> str:
+    def description_must_not_be_blank(cls, value: str) -> str:
         normalized = value.strip()
-        if not normalized or any(not character.isalpha() and character != " " for character in normalized):
-            raise ValueError("Name must contain letters and spaces only")
-        return normalized
+        if not normalized:
+            raise ValueError("Description cannot be empty")
+        return value.strip()
 
 
-class PersonDetailsUpdate(BaseModel):
-    age: Optional[StrictInt] = Field(default=None, ge=1, le=110)
+class BlogUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
     city: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
+    author: Optional[str] = None
 
-    @field_validator("city")
+    @field_validator("title", "city", "author")
     @classmethod
-    def city_must_contain_letters_only(cls, value: Optional[str]) -> Optional[str]:
+    def must_contain_letters_only(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return value
+
         normalized = value.strip()
         if not normalized or any(not character.isalpha() and character != " " for character in normalized):
-            raise ValueError("City must contain letters and spaces only")
+            raise ValueError("Only letters and spaces are allowed")
         return normalized
 
-    @field_validator("email")
+    @field_validator("description")
     @classmethod
-    def email_must_contain_at(cls, value: Optional[str]) -> Optional[str]:
-        if value is not None and "@" not in value:
-            raise ValueError("Email must contain @")
-        return value
-
-
-class PersonUpdate(BaseModel):
-    name: Optional[str] = None
-    details: Optional[PersonDetailsUpdate] = None
-
-    @field_validator("name")
-    @classmethod
-    def name_must_contain_letters_only(cls, value: Optional[str]) -> Optional[str]:
+    def description_must_not_be_blank(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
             return value
+
         normalized = value.strip()
-        if not normalized or any(not character.isalpha() and character != " " for character in normalized):
-            raise ValueError("Name must contain letters and spaces only")
-        return normalized
+        if not normalized:
+            raise ValueError("Description cannot be empty")
+        return value.strip()
 
 
-class Person(PersonCreate):
-    id: int
+class Blog(Base):
+    __tablename__ = "blogs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=False, default="")
+    city = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    author = Column(String, nullable=False)
+    date_created = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
-def get_connection() -> sqlite3.Connection:
-    connection = sqlite3.connect(DATABASE_PATH)
-    connection.row_factory = sqlite3.Row
-    return connection
-
-
-def init_db() -> None:
-    with get_connection() as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS people (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                details TEXT NOT NULL
-            )
-            """
-        )
-
-
-def row_to_person(row: sqlite3.Row) -> Dict[str, Any]:
+def row_to_blog(blog: Blog) -> dict:
     return {
-        "id": row["id"],
-        "name": row["name"],
-        "details": json.loads(row["details"]),
+        "id": blog.id,
+        "title": blog.title,
+        "description": blog.description,
+        "city": blog.city,
+        "email": blog.email,
+        "author": blog.author,
+        "date_created": blog.date_created,
     }
 
 
-app = FastAPI()
+def ensure_blog_description_column() -> None:
+    with engine.begin() as connection:
+        column_exists = connection.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = 'blogs'
+                      AND column_name = 'description'
+                )
+                """
+            )
+        ).scalar()
+
+        if not column_exists:
+            connection.execute(text("ALTER TABLE blogs ADD COLUMN description TEXT"))
+            connection.execute(text("UPDATE blogs SET description = '' WHERE description IS NULL"))
+            connection.execute(text("ALTER TABLE blogs ALTER COLUMN description SET NOT NULL"))
+
+
+Base.metadata.create_all(bind=engine)
+ensure_blog_description_column()
+
+app = FastAPI(title="Blog API", description="API for managing blogs", version="1.0.0")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://127.0.0.1:5500",
         "http://localhost:5500",
-        "http://127.0.0.1:5501",
+        "http://127.0.0.1:5500",
         "http://localhost:5501",
-        "https://name-app-frontend.onrender.com",
+        "http://127.0.0.1:5501",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-init_db()
 
 
 @app.get("/")
@@ -136,80 +133,75 @@ def home():
     return {"message": "API"}
 
 
-@app.get("/names")
-def get_names():
-    with get_connection() as connection:
-        rows = connection.execute(
-            "SELECT id, name, details FROM people ORDER BY id"
-        ).fetchall()
-    return [row_to_person(row) for row in rows]
+@app.get("/db-check")
+def db_check(db: Session = Depends(get_db)):
+    try:
+        database_name = db.execute(text("SELECT current_database()")).scalar_one()
+        return {"status": "connected", "database": database_name}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Database connection failed") from exc
 
 
-@app.get("/names/{name_id}")
-def get_name_by_id(name_id: int):
-    with get_connection() as connection:
-        row = connection.execute(
-            "SELECT id, name, details FROM people WHERE id = ?",
-            (name_id,),
-        ).fetchone()
-
-    if row is None:
-        raise HTTPException(status_code=404, detail="Name not found")
-    return row_to_person(row)
+@app.get("/blogs")
+def get_blogs(db: Session = Depends(get_db)):
+    blogs = db.query(Blog).order_by(Blog.id).all()
+    return [row_to_blog(blog) for blog in blogs]
 
 
-@app.post("/names", status_code=201)
-def add_name(person: PersonCreate):
-    with get_connection() as connection:
-        cursor = connection.execute(
-            "INSERT INTO people (name, details) VALUES (?, ?)",
-            (person.name, json.dumps(person.details.model_dump())),
-        )
-        person_id = cursor.lastrowid
-
-    return {"id": person_id, "name": person.name, "details": person.details.model_dump()}
+@app.get("/blogs/{blog_id}")
+def get_blog_by_id(blog_id: int, db: Session = Depends(get_db)):
+    blog = db.query(Blog).filter(Blog.id == blog_id).first()
+    if blog is None:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    return row_to_blog(blog)
 
 
-@app.put("/names/{name_id}")
-def update_name_by_id(name_id: int, person: PersonUpdate):
-    with get_connection() as connection:
-        existing = connection.execute(
-            "SELECT id, name, details FROM people WHERE id = ?",
-            (name_id,),
-        ).fetchone()
-        if existing is None:
-            raise HTTPException(status_code=404, detail="Name not found")
-
-        updated_name = person.name if person.name is not None else existing["name"]
-        current_details = json.loads(existing["details"])
-        updated_details = current_details.copy()
-
-        if person.details is not None:
-            for field, value in person.details.model_dump().items():
-                if value is not None:
-                    updated_details[field] = value
-
-        connection.execute(
-            "UPDATE people SET name = ?, details = ? WHERE id = ?",
-            (updated_name, json.dumps(updated_details), name_id),
-        )
-
-    return {"id": name_id, "name": updated_name, "details": updated_details}
+@app.post("/blogs", status_code=201)
+def add_blog(blog: BlogCreate, db: Session = Depends(get_db)):
+    db_blog = Blog(
+        title=blog.title,
+        description=blog.description,
+        city=blog.city,
+        email=str(blog.email),
+        author=blog.author,
+    )
+    db.add(db_blog)
+    db.commit()
+    db.refresh(db_blog)
+    return row_to_blog(db_blog)
 
 
-@app.delete("/names/{name_id}")
-def delete_name_by_id(name_id: int):
-    with get_connection() as connection:
-        existing = connection.execute(
-            "SELECT id, name, details FROM people WHERE id = ?",
-            (name_id,),
-        ).fetchone()
-        if existing is None:
-            raise HTTPException(status_code=404, detail="Name not found")
+@app.put("/blogs/{blog_id}")
+def update_blog_by_id(blog_id: int, blog: BlogUpdate, db: Session = Depends(get_db)):
+    existing = db.query(Blog).filter(Blog.id == blog_id).first()
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Blog not found")
 
-        connection.execute("DELETE FROM people WHERE id = ?", (name_id,))
+    if blog.title is not None:
+        existing.title = blog.title
+    if blog.description is not None:
+        existing.description = blog.description
+    if blog.city is not None:
+        existing.city = blog.city
+    if blog.email is not None:
+        existing.email = str(blog.email)
+    if blog.author is not None:
+        existing.author = blog.author
 
-    return {"message": "Name deleted successfully", "deleted": row_to_person(existing)}
+    db.commit()
+    db.refresh(existing)
+    return row_to_blog(existing)
+
+
+@app.delete("/blogs/{blog_id}")
+def delete_blog_by_id(blog_id: int, db: Session = Depends(get_db)):
+    existing = db.query(Blog).filter(Blog.id == blog_id).first()
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Blog not found")
+
+    db.delete(existing)
+    db.commit()
+    return {"message": "Blog deleted successfully", "deleted": row_to_blog(existing)}
 
 
 if __name__ == "__main__":

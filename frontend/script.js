@@ -1,145 +1,332 @@
-const fallbackImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'%3E%3Crect width='1200' height='800' fill='%230b3a8c'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' fill='white' font-size='46' font-family='Arial'%3EIndia Cricket%3C/text%3E%3C/svg%3E";
+const API_URL = 'http://127.0.0.1:8000';
 
-const articleGrid = document.getElementById('blogGrid');
-const articleCount = document.getElementById('blogCount');
-const articleContent = document.getElementById('articleContent');
-const relatedArticles = document.getElementById('relatedArticles');
-const backToBlogs = document.getElementById('backToBlogs');
+const form = document.getElementById('blogForm');
+const blogList = document.getElementById('blogList');
+const messageBox = document.getElementById('message');
+const refreshBtn = document.getElementById('refreshBtn');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+const blogIdInput = document.getElementById('blogId');
+const titleInput = document.getElementById('title');
+const descriptionInput = document.getElementById('description');
+const cityInput = document.getElementById('city');
+const emailInput = document.getElementById('email');
+const authorInput = document.getElementById('author');
+const formTitle = document.getElementById('formTitle');
+const saveBlogBtn = document.getElementById('saveBlogBtn');
+const detailsDialog = document.getElementById('blogDetailsDialog');
+const detailsList = document.getElementById('detailsList');
+const detailsUpdateBtn = document.getElementById('detailsUpdateBtn');
+const detailsDeleteBtn = document.getElementById('detailsDeleteBtn');
 
-const blogArticles = Array.isArray(window.blogs) ? window.blogs : [];
+let editingBlogId = null;
+let detailsBlogId = null;
+let returnToDetailsId = null;
 
-function safeImage(image, title, className = '') {
-  const img = document.createElement('img');
-  img.src = image;
-  img.alt = title;
-  img.loading = 'lazy';
-  img.className = className;
-  img.onerror = () => {
-    img.src = fallbackImage;
-    img.alt = `${title} image unavailable`;
+function showMessage(text, type = 'success') {
+  messageBox.textContent = text;
+  messageBox.className = `message ${type}`;
+}
+
+function clearMessage() {
+  messageBox.textContent = '';
+  messageBox.className = 'message';
+}
+
+function responseError(data, fallback) {
+  if (Array.isArray(data.detail)) {
+    return data.detail.map((item) => item.msg).filter(Boolean).join(' ') || fallback;
+  }
+  return data.detail || fallback;
+}
+
+async function readResponse(response, fallback) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(responseError(data, fallback));
+  }
+  return data;
+}
+
+function getFormData() {
+  return {
+    title: titleInput.value.trim(),
+    description: descriptionInput.value.trim(),
+    city: cityInput.value.trim(),
+    email: emailInput.value.trim(),
+    author: authorInput.value.trim(),
   };
-  return img;
 }
 
-function renderContentParagraph(paragraph, index, total) {
-  if (index === total - 1) {
-    return `<div class="key-takeaway"><strong>Key takeaway:</strong> ${paragraph}</div>`;
+function formatCreatedAt(value) {
+  if (!value) {
+    return { date: 'Unavailable', time: 'Unavailable' };
   }
 
-  if (paragraph.startsWith('### ')) {
-    return `<h2>${paragraph.replace(/^###\s+/, '')}</h2>`;
+  const createdAt = new Date(value);
+  if (Number.isNaN(createdAt.getTime())) {
+    return { date: 'Unavailable', time: 'Unavailable' };
   }
 
-  if (paragraph.startsWith('## ')) {
-    return `<h2>${paragraph.replace(/^##\s+/, '')}</h2>`;
+  return {
+    date: new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+    }).format(createdAt),
+    time: new Intl.DateTimeFormat(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(createdAt),
+  };
+}
+
+function addText(parent, tagName, className, text) {
+  const element = document.createElement(tagName);
+  if (className) {
+    element.className = className;
+  }
+  element.textContent = text;
+  parent.append(element);
+  return element;
+}
+
+function createActionButton(label, action, blogId, className) {
+  const button = document.createElement('button');
+  button.className = className;
+  button.type = 'button';
+  button.dataset.action = action;
+  button.dataset.blogId = blogId;
+  button.textContent = label;
+  return button;
+}
+
+function renderBlogs(blogs) {
+  blogList.replaceChildren();
+  if (!Array.isArray(blogs)) {
+    throw new Error('The blog list response was not valid.');
   }
 
-  return `<p>${paragraph}</p>`;
-}
-
-function formatArticle(blog) {
-  return `
-    <div class="article-image-wrap">
-      ${safeImage(blog.image, blog.title).outerHTML}
-      <div class="image-credit">Image: ${blog.imageAuthor || 'Wikimedia Commons'} • ${blog.imageLicense || 'License details on Commons'} • <a href="${blog.imageSource || 'https://commons.wikimedia.org/'}" target="_blank" rel="noopener noreferrer">View source</a></div>
-    </div>
-    <div class="article-text">
-      <p class="eyebrow dark">${blog.category}</p>
-      <h1>${blog.title}</h1>
-      <div class="article-meta">
-        <span><strong>By</strong> ${blog.author}</span>
-        <span>•</span>
-        <span>${blog.date}</span>
-      </div>
-      ${blog.content.map((paragraph, index) => renderContentParagraph(paragraph, index, blog.content.length)).join('')}
-    </div>
-  `;
-}
-
-function renderCards() {
-  articleGrid.innerHTML = '';
-  articleCount.textContent = `${blogArticles.length} article${blogArticles.length === 1 ? '' : 's'}`;
-
-  blogArticles.forEach(blog => {
-    const card = document.createElement('article');
-    card.className = 'blog-card';
-    card.innerHTML = `
-      <div class="blog-card-image">
-        ${safeImage(blog.image, blog.title).outerHTML}
-      </div>
-      <div class="blog-card-content">
-        <span class="category">${blog.category}</span>
-        <h3>${blog.title}</h3>
-        <p>${blog.description}</p>
-        <div class="blog-meta">
-          <span>${blog.author}</span>
-          <span>•</span>
-          <span>${blog.date}</span>
-        </div>
-        <a class="card-button" href="blog.html?id=${blog.id}">Read More</a>
-      </div>
-    `;
-    articleGrid.appendChild(card);
-  });
-}
-
-function renderHomePage() {
-  if (!articleGrid || !articleCount) return;
-  renderCards();
-}
-
-function renderRelatedArticles(currentId) {
-  const related = blogArticles.filter(blog => blog.id !== currentId).slice(0, 3);
-  relatedArticles.innerHTML = '';
-
-  related.forEach(blog => {
-    const card = document.createElement('article');
-    card.className = 'related-card';
-    card.innerHTML = `
-      <div class="related-card-image">
-        ${safeImage(blog.image, blog.title).outerHTML}
-      </div>
-      <div class="related-card-body">
-        <h3>${blog.title}</h3>
-        <p>${blog.category}</p>
-      </div>
-    `;
-    const link = document.createElement('a');
-    link.href = `blog.html?id=${blog.id}`;
-    link.setAttribute('aria-label', `Read ${blog.title}`);
-    link.appendChild(card);
-    relatedArticles.appendChild(link);
-  });
-}
-
-function renderBlogPage() {
-  if (!articleContent) return;
-  const params = new URLSearchParams(window.location.search);
-  const id = Number(params.get('id'));
-  const blog = window.findBlogById(id);
-
-  if (!blog) {
-    articleContent.innerHTML = '<div class="article-text"><h1>Article not found</h1><p>The requested article may have been moved or no longer exists.</p><a class="card-button" href="index.html#blogs">Return to blogs</a></div>';
+  if (!blogs.length) {
+    addText(blogList, 'div', 'empty-state', 'No blogs found yet.');
     return;
   }
 
-  articleContent.innerHTML = formatArticle(blog);
-  renderRelatedArticles(blog.id);
-  if (backToBlogs) backToBlogs.href = `index.html#blogs`;
+  for (const blog of blogs) {
+    const card = document.createElement('article');
+    card.className = 'blog-card';
+
+    const title = createActionButton(blog.title ?? '', 'view', blog.id, 'blog-title');
+    title.setAttribute('aria-label', `View details for ${blog.title ?? 'blog'}`);
+    card.append(title);
+
+    const createdAt = formatCreatedAt(blog.date_created);
+    const metadata = document.createElement('div');
+    metadata.className = 'blog-meta';
+    addText(metadata, 'p', '', `Created Date: ${createdAt.date}`);
+    addText(metadata, 'p', '', `Created Time: ${createdAt.time}`);
+    card.append(metadata);
+
+    const actions = document.createElement('div');
+    actions.className = 'card-actions';
+    actions.append(
+      createActionButton('View Details', 'view', blog.id, 'view-btn'),
+      createActionButton('Update', 'update', blog.id, 'edit-btn'),
+      createActionButton('Delete', 'delete', blog.id, 'delete-btn'),
+    );
+    card.append(actions);
+    blogList.append(card);
+  }
 }
 
-function initializeBlogApp() {
-  if (window.__blogAppInitialized) return;
-  window.__blogAppInitialized = true;
-
-  if (articleGrid) renderHomePage();
-  if (articleContent) renderBlogPage();
+async function loadBlogs() {
+  try {
+    const response = await fetch(`${API_URL}/blogs`);
+    const blogs = await readResponse(response, 'Unable to load blogs.');
+    renderBlogs(blogs);
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
 }
 
-window.initializeBlogApp = initializeBlogApp;
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeBlogApp, { once: true });
-} else {
-  initializeBlogApp();
+function setFormMode(isEditing) {
+  formTitle.textContent = isEditing ? 'Update Blog' : 'Create Blog';
+  saveBlogBtn.textContent = isEditing ? 'Update Blog' : 'Save Blog';
+  cancelEditBtn.classList.toggle('hidden', !isEditing);
 }
+
+function resetForm() {
+  form.reset();
+  editingBlogId = null;
+  blogIdInput.value = '';
+  setFormMode(false);
+}
+
+function closeDetails() {
+  if (detailsDialog.open) {
+    detailsDialog.close();
+  }
+  detailsBlogId = null;
+}
+
+async function openBlogDetails(blogId) {
+  try {
+    const response = await fetch(`${API_URL}/blogs/${blogId}`);
+    const blog = await readResponse(response, 'Unable to load blog details.');
+    const createdAt = formatCreatedAt(blog.date_created);
+    const fields = [
+      ['Blog ID', blog.id],
+      ['Blog Title', blog.title],
+      ['Full Description', blog.description],
+      ['Author Name', blog.author],
+      ['City', blog.city],
+      ['Email', blog.email],
+      ['Created Date', createdAt.date],
+      ['Created Time', createdAt.time],
+    ];
+
+    detailsList.replaceChildren();
+    for (const [label, value] of fields) {
+      addText(detailsList, 'dt', '', label);
+      addText(detailsList, 'dd', '', value ?? '');
+    }
+
+    detailsBlogId = blog.id;
+    if (!detailsDialog.open) {
+      detailsDialog.showModal();
+    }
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+}
+
+async function startEdit(blogId) {
+  try {
+    const response = await fetch(`${API_URL}/blogs/${blogId}`);
+    const blog = await readResponse(response, 'Unable to load blog details.');
+    returnToDetailsId = detailsDialog.open && detailsBlogId === blog.id ? blog.id : null;
+    closeDetails();
+    editingBlogId = blog.id;
+    blogIdInput.value = blog.id;
+    titleInput.value = blog.title ?? '';
+    descriptionInput.value = blog.description ?? '';
+    cityInput.value = blog.city ?? '';
+    emailInput.value = blog.email ?? '';
+    authorInput.value = blog.author ?? '';
+    setFormMode(true);
+    clearMessage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    titleInput.focus({ preventScroll: true });
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+}
+
+async function deleteBlog(blogId) {
+  try {
+    const detailResponse = await fetch(`${API_URL}/blogs/${blogId}`);
+    const blog = await readResponse(detailResponse, 'Unable to load blog details.');
+    const confirmed = window.confirm(`Delete "${blog.title}"? This action cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/blogs/${blogId}`, { method: 'DELETE' });
+    await readResponse(response, 'Unable to delete blog.');
+
+    if (editingBlogId === blogId) {
+      resetForm();
+    }
+    if (detailsBlogId === blogId) {
+      closeDetails();
+    }
+    if (returnToDetailsId === blogId) {
+      returnToDetailsId = null;
+    }
+    showMessage('Blog deleted successfully.');
+    await loadBlogs();
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+}
+
+async function saveBlog(event) {
+  event.preventDefault();
+  clearMessage();
+
+  const payload = getFormData();
+  const isEditing = editingBlogId !== null;
+  const url = isEditing ? `${API_URL}/blogs/${editingBlogId}` : `${API_URL}/blogs`;
+
+  try {
+    const response = await fetch(url, {
+      method: isEditing ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    await readResponse(response, isEditing ? 'Unable to update blog.' : 'Unable to create blog.');
+
+    const refreshedDetailsId = returnToDetailsId;
+    returnToDetailsId = null;
+    resetForm();
+    showMessage(isEditing ? 'Blog updated successfully.' : 'Blog created successfully.');
+    await loadBlogs();
+    if (refreshedDetailsId !== null) {
+      await openBlogDetails(refreshedDetailsId);
+    }
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+}
+
+blogList.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-action]');
+  if (!button) {
+    return;
+  }
+
+  const blogId = Number(button.dataset.blogId);
+  if (button.dataset.action === 'view') {
+    openBlogDetails(blogId);
+  } else if (button.dataset.action === 'update') {
+    startEdit(blogId);
+  } else if (button.dataset.action === 'delete') {
+    deleteBlog(blogId);
+  }
+});
+
+form.addEventListener('submit', saveBlog);
+cancelEditBtn.addEventListener('click', async () => {
+  const blogId = returnToDetailsId;
+  returnToDetailsId = null;
+  resetForm();
+  clearMessage();
+  if (blogId !== null) {
+    await openBlogDetails(blogId);
+  }
+});
+refreshBtn.addEventListener('click', () => {
+  clearMessage();
+  loadBlogs();
+});
+detailsUpdateBtn.addEventListener('click', () => {
+  if (detailsBlogId !== null) {
+    startEdit(detailsBlogId);
+  }
+});
+detailsDeleteBtn.addEventListener('click', () => {
+  if (detailsBlogId !== null) {
+    deleteBlog(detailsBlogId);
+  }
+});
+document.getElementById('closeDetailsBtn').addEventListener('click', closeDetails);
+document.getElementById('closeDetailsIcon').addEventListener('click', closeDetails);
+detailsDialog.addEventListener('click', (event) => {
+  if (event.target === detailsDialog) {
+    closeDetails();
+  }
+});
+detailsDialog.addEventListener('close', () => {
+  detailsBlogId = null;
+});
+
+loadBlogs();

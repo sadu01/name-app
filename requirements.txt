@@ -2,3 +2,7 @@ fastapi
 uvicorn
 gunicorn
 httpx
+sqlalchemy
+psycopg[binary]
+python-dotenv
+email-validator
