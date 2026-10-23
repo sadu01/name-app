@@ -16,6 +16,21 @@
       <div id="message" class="message" aria-live="polite"></div>
 
       <section class="form-panel">
+        <h2>Create New User</h2>
+
+        <form id="userForm">
+          <label for="newUserName">User Name</label>
+          <input
+            type="text"
+            id="newUserName"
+            placeholder="Enter user name"
+            required/>
+
+          <button type="submit" class="primary-btn">Add User</button>
+        </form>
+      </section>
+
+      <section class="form-panel">
         <h2 id="formTitle">Create Blog</h2>
         <form id="blogForm">
           <input type="hidden" id="blogId" />
@@ -41,11 +56,40 @@
               <input id="author" name="author" type="text" placeholder="Enter author" required />
             </div>
           </div>
+         <div class="field">
+          <label for="userId">Select User</label>
 
+          <select id="userId" name="user_id" required>
+            <option value="">Select User</option>
+          </select>
+          </div>
           <div class="field full-width">
             <label for="description">Description</label>
             <textarea id="description" name="description" rows="6" placeholder="Write your blog description here..." required></textarea>
           </div>
+
+
+        <div class="field full-width">
+          <label>Select Tags (Optional)</label>
+
+          <div class="tag-options">
+            <label>
+              <input type="checkbox" name="tags" value="1" />
+              King
+            </label>
+
+            <label>
+              <input type="checkbox" name="tags" value="2" />
+              Queen
+            </label>
+
+            <label>
+              <input type="checkbox" name="tags" value="3" />
+              Son
+            </label>
+          </div>
+        </div>
+
 
           <div class="form-actions">
             <button id="saveBlogBtn" class="primary-btn" type="submit">Save Blog</button>
@@ -54,12 +98,32 @@
         </form>
       </section>
 
-      <section class="blogs-panel">
-        <div class="section-header">
-          <h2>All Blogs</h2>
-        </div>
-        <div id="blogList" class="blog-list" aria-live="polite"></div>
-      </section>
+      
+<section class="blogs-panel">
+  <div class="section-header">
+    <h2>All Blogs</h2>
+  </div>
+
+<div class="field">
+  <label for="tagFilter">Filter Blogs by Tag</label>
+  <select id="tagFilter">
+    <option value="All">All Tags</option>
+    <option value="King">King</option>
+    <option value="Queen">Queen</option>
+    <option value="Son">Son</option>
+  </select>
+</div>
+
+<div class="field">
+  <label for="userFilter">Filter Blogs by User</label>
+  <select id="userFilter">
+    <option value="All">All Users</option>
+  </select>
+</div>
+
+  <div id="blogList" class="blog-list" aria-live="polite"></div>
+</section>
+
     </div>
 
     <dialog id="blogDetailsDialog" class="details-dialog" aria-labelledby="detailsTitle">

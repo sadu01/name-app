@@ -1,7 +1,8 @@
-const API_URL = 'https://name-app-yj19.onrender.com';
+const API_URL = 'http://127.0.0.1:8000';
 
 const form = document.getElementById('blogForm');
 const blogList = document.getElementById('blogList');
+const tagFilter = document.getElementById('tagFilter');
 const messageBox = document.getElementById('message');
 const refreshBtn = document.getElementById('refreshBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
@@ -17,7 +18,9 @@ const detailsDialog = document.getElementById('blogDetailsDialog');
 const detailsList = document.getElementById('detailsList');
 const detailsUpdateBtn = document.getElementById('detailsUpdateBtn');
 const detailsDeleteBtn = document.getElementById('detailsDeleteBtn');
-
+const userFilter = document.getElementById('userFilter');
+const userIdInput = document.getElementById('userId');
+let allBlogs = [];
 let editingBlogId = null;
 let detailsBlogId = null;
 let returnToDetailsId = null;
@@ -47,15 +50,27 @@ async function readResponse(response, fallback) {
   return data;
 }
 
+
 function getFormData() {
-  return {
-    title: titleInput.value.trim(),
-    description: descriptionInput.value.trim(),
-    city: cityInput.value.trim(),
-    email: emailInput.value.trim(),
-    author: authorInput.value.trim(),
-  };
+    const selectedTags = document.querySelectorAll(
+        'input[name="tags"]:checked'
+    );
+
+    const tagIds = Array.from(selectedTags).map(
+        checkbox => Number(checkbox.value)
+    );
+
+    return {
+        title: titleInput.value.trim(),
+        description: descriptionInput.value.trim(),
+        city: cityInput.value.trim(),
+        email: emailInput.value.trim(),
+        author: authorInput.value.trim(),
+        tag_ids: tagIds,
+        user_id: Number(userIdInput.value)
+    };
 }
+
 
 function formatCreatedAt(value) {
   if (!value) {
@@ -138,11 +153,108 @@ function renderBlogs(blogs) {
   }
 }
 
+
+
+async function loadUsers() {
+    try {
+        const response = await fetch(`${API_URL}/users`);
+        const users = await readResponse(
+            response,
+            'Unable to load users.'
+        );
+
+        const selectedUser = userIdInput.value;
+        const selectedFilter = userFilter.value;
+
+        // Create Blog dropdown
+        userIdInput.replaceChildren(
+            new Option('Select User', '')
+        );
+
+        // Filter Blogs dropdown
+        userFilter.replaceChildren(
+            new Option('All Users', 'All')
+        );
+
+        users.forEach(user => {
+            userIdInput.add(
+                new Option(user.name, String(user.id))
+            );
+
+            userFilter.add(
+                new Option(user.name, String(user.id))
+            );
+        });
+
+        if (users.some(u => String(u.id) === selectedUser)) {
+            userIdInput.value = selectedUser;
+        }
+
+        if (users.some(u => String(u.id) === selectedFilter)) {
+            userFilter.value = selectedFilter;
+        }
+
+        filterBlogs();
+
+    } catch (error) {
+        showMessage(error.message, 'error');
+    }
+}
+
+
+function populateUserFilter() {
+    const selectedUser = userFilter.value;
+    const users = new Map();
+
+    allBlogs.forEach(blog => {
+        if (blog.user_id != null && blog.user_name) {
+            users.set(String(blog.user_id), blog.user_name);
+        }
+    });
+
+    userFilter.replaceChildren(new Option('All Users', 'All'));
+
+    users.forEach((name, id) => {
+        userFilter.add(new Option(name, id));
+    });
+
+    userFilter.value = users.has(selectedUser)
+        ? selectedUser
+        : 'All';
+}
+
+function filterBlogs() {
+    const selectedTag = tagFilter.value;
+    const selectedUser = userFilter.value;
+
+    const filteredBlogs = allBlogs.filter(blog => {
+        const matchesTag =
+            selectedTag === 'All' ||
+            (Array.isArray(blog.tags) &&
+             blog.tags.includes(selectedTag));
+
+        const matchesUser =
+            selectedUser === 'All' ||
+            String(blog.user_id) === selectedUser;
+
+        return matchesTag && matchesUser;
+    });
+
+    renderBlogs(filteredBlogs);
+}
+
+
 async function loadBlogs() {
   try {
     const response = await fetch(`${API_URL}/blogs`);
     const blogs = await readResponse(response, 'Unable to load blogs.');
-    renderBlogs(blogs);
+
+    if (!Array.isArray(blogs)) {
+      throw new Error('The blog list response was not valid.');
+    }
+
+    allBlogs = blogs;
+filterBlogs();
   } catch (error) {
     showMessage(error.message, 'error');
   }
@@ -167,6 +279,10 @@ function closeDetails() {
   }
   detailsBlogId = null;
 }
+
+tagFilter.addEventListener('change', filterBlogs);
+userFilter.addEventListener('change', filterBlogs);
+
 
 async function openBlogDetails(blogId) {
   try {
@@ -329,4 +445,38 @@ detailsDialog.addEventListener('close', () => {
   detailsBlogId = null;
 });
 
+const userForm = document.getElementById('userForm');
+
+userForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const name = document.getElementById('newUserName').value.trim();
+
+    if (!name) return;
+
+    try {
+        const response = await fetch(`${API_URL}/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name })
+        });
+
+        if (!response.ok) {
+            throw new Error('Unable to create user');
+        }
+
+        userForm.reset();
+
+        await loadUsers();
+
+        showMessage('User created successfully');
+
+    } catch (error) {
+        showMessage(error.message, 'error');
+    }
+});
+
 loadBlogs();
+loadUsers();
