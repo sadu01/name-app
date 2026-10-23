@@ -193,6 +193,7 @@ app.add_middleware(
         "http://127.0.0.1:8001",
         "http://localhost:8001",
         "https://name-app-frontend.onrender.com",
+        "https://name-app-yj19.onrender.com"
 
     ],
     allow_credentials=True,
