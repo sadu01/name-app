@@ -219,6 +219,10 @@ def db_check(db: Session = Depends(get_db)):
 @app.get("/blogs")
 def get_blogs(db: Session = Depends(get_db)):
     blogs = db.query(Blog).order_by(Blog.id).all()
+
+    print(db.query(Blog).order_by(Blog.id).statement.compile(compile_kwargs={"literal_binds": True}))
+    print(f"Retrieved {len(blogs)} blogs from the database.")
+    print(f"Blogs: {blogs}")
     return [row_to_blog(blog) for blog in blogs]
 
 
