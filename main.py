@@ -119,6 +119,8 @@ class User(Base):
 
     blogs = relationship("Blog",back_populates="user")
 
+    password_hash = Column(String, nullable=True)
+
 
 class Profile(Base):
     __tablename__ = "profiles"
@@ -367,6 +369,7 @@ def create_user(data: UserCreate, db: Session = Depends(get_db)):
     return {
         "id": new_user.id,
         "name": new_user.name
+        
     }
 
 if __name__ == "__main__":
