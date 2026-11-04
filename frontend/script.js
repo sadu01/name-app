@@ -1,10 +1,19 @@
-const API_URL = 'https://name-app-yj19.onrender.com';
+const localHosts = new Set(['localhost', '127.0.0.1']);
+const API_URL =
+  window.API_URL ||
+  (localHosts.has(window.location.hostname)
+    ? `${window.location.protocol}//${window.location.hostname}:8000`
+    : 'https://name-app-yj19.onrender.com');
 
 const form = document.getElementById('blogForm');
+const blogFormPanel = document.getElementById('blogFormPanel');
 const blogList = document.getElementById('blogList');
 const tagFilter = document.getElementById('tagFilter');
+const userFilter = document.getElementById('userFilter');
 const messageBox = document.getElementById('message');
 const refreshBtn = document.getElementById('refreshBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const currentUserDisplay = document.getElementById('currentUser');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const blogIdInput = document.getElementById('blogId');
 const titleInput = document.getElementById('title');
@@ -18,15 +27,22 @@ const detailsDialog = document.getElementById('blogDetailsDialog');
 const detailsList = document.getElementById('detailsList');
 const detailsUpdateBtn = document.getElementById('detailsUpdateBtn');
 const detailsDeleteBtn = document.getElementById('detailsDeleteBtn');
-const userFilter = document.getElementById('userFilter');
-const userIdInput = document.getElementById('userId');
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const authPanel = document.getElementById('authPanel');
+
 let allBlogs = [];
+let accessToken = null;
+let csrfToken = null;
+let hasRefreshSession = false;
+let currentUser = null;
 let editingBlogId = null;
 let detailsBlogId = null;
 let returnToDetailsId = null;
+let refreshRequest = null;
 
-function showMessage(text, type = 'success') {
-  messageBox.textContent = text;
+function showMessage(message, type = 'success') {
+  messageBox.textContent = message;
   messageBox.className = `message ${type}`;
 }
 
@@ -35,53 +51,150 @@ function clearMessage() {
   messageBox.className = 'message';
 }
 
-function responseError(data, fallback) {
-  if (Array.isArray(data.detail)) {
-    return data.detail.map((item) => item.msg).filter(Boolean).join(' ') || fallback;
+function messageForStatus(status, detail, fallback) {
+  if (status === 401) return 'Please log in again to continue.';
+  if (status === 403) return detail || 'You are not allowed to perform this action.';
+  if (status === 409) return detail || 'That username or email is already registered.';
+  if (status === 422) {
+    if (Array.isArray(detail)) {
+      return detail.map((item) => item.msg).filter(Boolean).join(' ') || 'Please check the entered values.';
+    }
+    return detail || 'Please check the entered values.';
   }
-  return data.detail || fallback;
+  if (status === 429) return 'Too many attempts. Please wait a few minutes and try again.';
+  return detail || fallback;
 }
 
 async function readResponse(response, fallback) {
-  const data = await response.json().catch(() => ({}));
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    if (response.ok) throw new Error('The server returned an invalid response.');
+    data = {};
+  }
   if (!response.ok) {
-    throw new Error(responseError(data, fallback));
+    throw new Error(messageForStatus(response.status, data.detail, fallback));
   }
   return data;
 }
 
-
-function getFormData() {
-    const selectedTags = document.querySelectorAll(
-        'input[name="tags"]:checked'
-    );
-
-    const tagIds = Array.from(selectedTags).map(
-        checkbox => Number(checkbox.value)
-    );
-
-    return {
-        title: titleInput.value.trim(),
-        description: descriptionInput.value.trim(),
-        city: cityInput.value.trim(),
-        email: emailInput.value.trim(),
-        author: authorInput.value.trim(),
-        tag_ids: tagIds,
-        user_id: Number(userIdInput.value)
-    };
+async function loadCsrfToken() {
+  const response = await fetch(`${API_URL}/csrf`, { credentials: 'include' });
+  const data = await readResponse(response, 'Unable to verify your session.');
+  csrfToken = data.csrf_token;
+  hasRefreshSession = Boolean(data.has_refresh_session);
+  if (!csrfToken) throw new Error('The server did not return a CSRF token.');
+  return true;
 }
 
+async function refreshAccessToken() {
+  if (refreshRequest) return refreshRequest;
+
+  refreshRequest = (async () => {
+    try {
+      if (!csrfToken && !(await loadCsrfToken())) return false;
+      if (!hasRefreshSession) return false;
+      const response = await fetch(`${API_URL}/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-Token': csrfToken },
+      });
+      if (!response.ok) {
+        hasRefreshSession = false;
+        return false;
+      }
+      const data = await response.json();
+      accessToken = data.access_token;
+      csrfToken = data.csrf_token;
+      hasRefreshSession = true;
+      return Boolean(accessToken);
+    } catch (error) {
+      showMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to verify your session. Check your connection and try again.',
+        'error',
+      );
+      return false;
+    } finally {
+      refreshRequest = null;
+    }
+  })();
+  return refreshRequest;
+}
+
+async function authenticatedRequest(path, options = {}, retry = true) {
+  if (!accessToken && !(await refreshAccessToken())) {
+    throw new Error('Please log in to manage blogs.');
+  }
+
+  const headers = new Headers(options.headers || {});
+  headers.set('Authorization', `Bearer ${accessToken}`);
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
+
+  if (response.status === 401 && retry && (await refreshAccessToken())) {
+    return authenticatedRequest(path, options, false);
+  }
+  if (response.status === 401) {
+    clearSession();
+    throw new Error('Your session expired. Please log in again.');
+  }
+  return readResponse(response, 'The request could not be completed.');
+}
+
+function clearSession() {
+  accessToken = null;
+  csrfToken = null;
+  hasRefreshSession = false;
+  currentUser = null;
+  syncAuthUi();
+}
+
+function syncAuthUi() {
+  const authenticated = Boolean(currentUser && accessToken);
+  authPanel.classList.toggle('hidden', authenticated);
+  blogFormPanel.classList.toggle('hidden', !authenticated);
+  logoutBtn.classList.toggle('hidden', !authenticated);
+  currentUserDisplay.classList.toggle('hidden', !authenticated);
+  currentUserDisplay.textContent = authenticated
+    ? `Signed in as ${currentUser.name}`
+    : '';
+  renderBlogs(allBlogs);
+  if (detailsBlogId !== null) {
+    const blog = allBlogs.find((item) => item.id === detailsBlogId);
+    setDetailsPermissions(blog);
+  }
+}
+
+function setDetailsPermissions(blog) {
+  const isOwner = Boolean(
+    currentUser && blog && Number(blog.user_id) === Number(currentUser.id),
+  );
+  detailsUpdateBtn.classList.toggle('hidden', !isOwner);
+  detailsDeleteBtn.classList.toggle('hidden', !isOwner);
+}
+
+function getBlogFormData() {
+  const selectedTags = document.querySelectorAll('input[name="tags"]:checked');
+  return {
+    title: titleInput.value.trim(),
+    description: descriptionInput.value.trim(),
+    city: cityInput.value.trim(),
+    email: emailInput.value.trim(),
+    author: authorInput.value.trim(),
+    tag_ids: Array.from(selectedTags, (checkbox) => Number(checkbox.value)),
+  };
+}
 
 function formatCreatedAt(value) {
-  if (!value) {
-    return { date: 'Unavailable', time: 'Unavailable' };
-  }
-
+  if (!value) return { date: 'Unavailable', time: 'Unavailable' };
   const createdAt = new Date(value);
-  if (Number.isNaN(createdAt.getTime())) {
-    return { date: 'Unavailable', time: 'Unavailable' };
-  }
-
+  if (Number.isNaN(createdAt.getTime())) return { date: 'Unavailable', time: 'Unavailable' };
   return {
     date: new Intl.DateTimeFormat(undefined, {
       year: 'numeric',
@@ -97,9 +210,7 @@ function formatCreatedAt(value) {
 
 function addText(parent, tagName, className, text) {
   const element = document.createElement(tagName);
-  if (className) {
-    element.className = className;
-  }
+  if (className) element.className = className;
   element.textContent = text;
   parent.append(element);
   return element;
@@ -120,7 +231,6 @@ function renderBlogs(blogs) {
   if (!Array.isArray(blogs)) {
     throw new Error('The blog list response was not valid.');
   }
-
   if (!blogs.length) {
     addText(blogList, 'div', 'empty-state', 'No blogs found yet.');
     return;
@@ -129,7 +239,6 @@ function renderBlogs(blogs) {
   for (const blog of blogs) {
     const card = document.createElement('article');
     card.className = 'blog-card';
-
     const title = createActionButton(blog.title ?? '', 'view', blog.id, 'blog-title');
     title.setAttribute('aria-label', `View details for ${blog.title ?? 'blog'}`);
     card.append(title);
@@ -143,118 +252,51 @@ function renderBlogs(blogs) {
 
     const actions = document.createElement('div');
     actions.className = 'card-actions';
-    actions.append(
-      createActionButton('View Details', 'view', blog.id, 'view-btn'),
-      createActionButton('Update', 'update', blog.id, 'edit-btn'),
-      createActionButton('Delete', 'delete', blog.id, 'delete-btn'),
-    );
+    actions.append(createActionButton('View Details', 'view', blog.id, 'view-btn'));
+    if (currentUser && Number(blog.user_id) === Number(currentUser.id)) {
+      actions.append(
+        createActionButton('Update', 'update', blog.id, 'edit-btn'),
+        createActionButton('Delete', 'delete', blog.id, 'delete-btn'),
+      );
+    }
     card.append(actions);
     blogList.append(card);
   }
 }
 
-
-
-async function loadUsers() {
-    try {
-        const response = await fetch(`${API_URL}/users`);
-        const users = await readResponse(
-            response,
-            'Unable to load users.'
-        );
-
-        const selectedUser = userIdInput.value;
-        const selectedFilter = userFilter.value;
-
-        // Create Blog dropdown
-        userIdInput.replaceChildren(
-            new Option('Select User', '')
-        );
-
-        // Filter Blogs dropdown
-        userFilter.replaceChildren(
-            new Option('All Users', 'All')
-        );
-
-        users.forEach(user => {
-            userIdInput.add(
-                new Option(user.name, String(user.id))
-            );
-
-            userFilter.add(
-                new Option(user.name, String(user.id))
-            );
-        });
-
-        if (users.some(u => String(u.id) === selectedUser)) {
-            userIdInput.value = selectedUser;
-        }
-
-        if (users.some(u => String(u.id) === selectedFilter)) {
-            userFilter.value = selectedFilter;
-        }
-
-        filterBlogs();
-
-    } catch (error) {
-        showMessage(error.message, 'error');
-    }
-}
-
-
 function populateUserFilter() {
-    const selectedUser = userFilter.value;
-    const users = new Map();
-
-    allBlogs.forEach(blog => {
-        if (blog.user_id != null && blog.user_name) {
-            users.set(String(blog.user_id), blog.user_name);
-        }
-    });
-
-    userFilter.replaceChildren(new Option('All Users', 'All'));
-
-    users.forEach((name, id) => {
-        userFilter.add(new Option(name, id));
-    });
-
-    userFilter.value = users.has(selectedUser)
-        ? selectedUser
-        : 'All';
+  const selectedUser = userFilter.value;
+  const users = new Map();
+  allBlogs.forEach((blog) => {
+    if (blog.user_id !== null && blog.user_name) {
+      users.set(String(blog.user_id), blog.user_name);
+    }
+  });
+  userFilter.replaceChildren(new Option('All Users', 'All'));
+  users.forEach((name, id) => userFilter.add(new Option(name, id)));
+  userFilter.value = users.has(selectedUser) ? selectedUser : 'All';
 }
 
 function filterBlogs() {
-    const selectedTag = tagFilter.value;
-    const selectedUser = userFilter.value;
-
-    const filteredBlogs = allBlogs.filter(blog => {
-        const matchesTag =
-            selectedTag === 'All' ||
-            (Array.isArray(blog.tags) &&
-             blog.tags.includes(selectedTag));
-
-        const matchesUser =
-            selectedUser === 'All' ||
-            String(blog.user_id) === selectedUser;
-
-        return matchesTag && matchesUser;
-    });
-
-    renderBlogs(filteredBlogs);
+  const selectedTag = tagFilter.value;
+  const selectedUser = userFilter.value;
+  renderBlogs(
+    allBlogs.filter((blog) => {
+      const matchesTag = selectedTag === 'All' || blog.tags?.includes(selectedTag);
+      const matchesUser = selectedUser === 'All' || String(blog.user_id) === selectedUser;
+      return matchesTag && matchesUser;
+    }),
+  );
 }
-
 
 async function loadBlogs() {
   try {
-    const response = await fetch(`${API_URL}/blogs`);
+    const response = await fetch(`${API_URL}/blogs`, { credentials: 'include' });
     const blogs = await readResponse(response, 'Unable to load blogs.');
-
-    if (!Array.isArray(blogs)) {
-      throw new Error('The blog list response was not valid.');
-    }
-
+    if (!Array.isArray(blogs)) throw new Error('The blog list response was not valid.');
     allBlogs = blogs;
-filterBlogs();
+    populateUserFilter();
+    filterBlogs();
   } catch (error) {
     showMessage(error.message, 'error');
   }
@@ -274,19 +316,13 @@ function resetForm() {
 }
 
 function closeDetails() {
-  if (detailsDialog.open) {
-    detailsDialog.close();
-  }
+  if (detailsDialog.open) detailsDialog.close();
   detailsBlogId = null;
 }
 
-tagFilter.addEventListener('change', filterBlogs);
-userFilter.addEventListener('change', filterBlogs);
-
-
 async function openBlogDetails(blogId) {
   try {
-    const response = await fetch(`${API_URL}/blogs/${blogId}`);
+    const response = await fetch(`${API_URL}/blogs/${blogId}`, { credentials: 'include' });
     const blog = await readResponse(response, 'Unable to load blog details.');
     const createdAt = formatCreatedAt(blog.date_created);
     const fields = [
@@ -299,17 +335,14 @@ async function openBlogDetails(blogId) {
       ['Created Date', createdAt.date],
       ['Created Time', createdAt.time],
     ];
-
     detailsList.replaceChildren();
     for (const [label, value] of fields) {
       addText(detailsList, 'dt', '', label);
       addText(detailsList, 'dd', '', value ?? '');
     }
-
     detailsBlogId = blog.id;
-    if (!detailsDialog.open) {
-      detailsDialog.showModal();
-    }
+    setDetailsPermissions(blog);
+    if (!detailsDialog.open) detailsDialog.showModal();
   } catch (error) {
     showMessage(error.message, 'error');
   }
@@ -317,8 +350,11 @@ async function openBlogDetails(blogId) {
 
 async function startEdit(blogId) {
   try {
-    const response = await fetch(`${API_URL}/blogs/${blogId}`);
+    const response = await fetch(`${API_URL}/blogs/${blogId}`, { credentials: 'include' });
     const blog = await readResponse(response, 'Unable to load blog details.');
+    if (!currentUser || Number(blog.user_id) !== Number(currentUser.id)) {
+      throw new Error('You may manage only your own blogs.');
+    }
     returnToDetailsId = detailsDialog.open && detailsBlogId === blog.id ? blog.id : null;
     closeDetails();
     editingBlogId = blog.id;
@@ -328,6 +364,10 @@ async function startEdit(blogId) {
     cityInput.value = blog.city ?? '';
     emailInput.value = blog.email ?? '';
     authorInput.value = blog.author ?? '';
+    const selectedTagIds = new Set(blog.tag_ids ?? []);
+    document.querySelectorAll('input[name="tags"]').forEach((checkbox) => {
+      checkbox.checked = selectedTagIds.has(Number(checkbox.value));
+    });
     setFormMode(true);
     clearMessage();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -339,25 +379,16 @@ async function startEdit(blogId) {
 
 async function deleteBlog(blogId) {
   try {
-    const detailResponse = await fetch(`${API_URL}/blogs/${blogId}`);
-    const blog = await readResponse(detailResponse, 'Unable to load blog details.');
-    const confirmed = window.confirm(`Delete "${blog.title}"? This action cannot be undone.`);
-    if (!confirmed) {
-      return;
+    const response = await fetch(`${API_URL}/blogs/${blogId}`, { credentials: 'include' });
+    const blog = await readResponse(response, 'Unable to load blog details.');
+    if (!currentUser || Number(blog.user_id) !== Number(currentUser.id)) {
+      throw new Error('You may manage only your own blogs.');
     }
-
-    const response = await fetch(`${API_URL}/blogs/${blogId}`, { method: 'DELETE' });
-    await readResponse(response, 'Unable to delete blog.');
-
-    if (editingBlogId === blogId) {
-      resetForm();
-    }
-    if (detailsBlogId === blogId) {
-      closeDetails();
-    }
-    if (returnToDetailsId === blogId) {
-      returnToDetailsId = null;
-    }
+    if (!window.confirm(`Delete "${blog.title}"? This action cannot be undone.`)) return;
+    await authenticatedRequest(`/blogs/${blogId}`, { method: 'DELETE' });
+    if (editingBlogId === blogId) resetForm();
+    if (detailsBlogId === blogId) closeDetails();
+    if (returnToDetailsId === blogId) returnToDetailsId = null;
     showMessage('Blog deleted successfully.');
     await loadBlogs();
   } catch (error) {
@@ -368,115 +399,194 @@ async function deleteBlog(blogId) {
 async function saveBlog(event) {
   event.preventDefault();
   clearMessage();
-
-  const payload = getFormData();
   const isEditing = editingBlogId !== null;
-  const url = isEditing ? `${API_URL}/blogs/${editingBlogId}` : `${API_URL}/blogs`;
-
+  const path = isEditing ? `/blogs/${editingBlogId}` : '/blogs';
+  saveBlogBtn.disabled = true;
+  saveBlogBtn.textContent = 'Saving…';
   try {
-    const response = await fetch(url, {
+    await authenticatedRequest(path, {
       method: isEditing ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(getBlogFormData()),
     });
-    await readResponse(response, isEditing ? 'Unable to update blog.' : 'Unable to create blog.');
-
     const refreshedDetailsId = returnToDetailsId;
     returnToDetailsId = null;
     resetForm();
     showMessage(isEditing ? 'Blog updated successfully.' : 'Blog created successfully.');
     await loadBlogs();
-    if (refreshedDetailsId !== null) {
-      await openBlogDetails(refreshedDetailsId);
-    }
+    if (refreshedDetailsId !== null) await openBlogDetails(refreshedDetailsId);
   } catch (error) {
     showMessage(error.message, 'error');
+  } finally {
+    saveBlogBtn.disabled = false;
+    saveBlogBtn.textContent = editingBlogId !== null ? 'Update Blog' : 'Save Blog';
   }
+}
+
+async function login(identifier, password) {
+  const response = await fetch(`${API_URL}/login`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ username: identifier, password }),
+  });
+  const data = await readResponse(response, 'Unable to log in.');
+  accessToken = data.access_token;
+  csrfToken = data.csrf_token;
+  hasRefreshSession = true;
+  currentUser = data.user;
+  syncAuthUi();
+  await loadBlogs();
+}
+
+async function withLoading(button, loadingText, action) {
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = loadingText;
+  try {
+    await action();
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
+function resetAuthForm(authForm) {
+  authForm.reset();
+  authForm.querySelectorAll('[data-toggle-password]').forEach((button) => {
+    document.getElementById(button.dataset.togglePassword).type = 'password';
+    button.textContent = 'Show';
+  });
 }
 
 blogList.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-action]');
-  if (!button) {
-    return;
-  }
-
+  if (!button) return;
   const blogId = Number(button.dataset.blogId);
-  if (button.dataset.action === 'view') {
-    openBlogDetails(blogId);
-  } else if (button.dataset.action === 'update') {
-    startEdit(blogId);
-  } else if (button.dataset.action === 'delete') {
-    deleteBlog(blogId);
-  }
+  if (button.dataset.action === 'view') openBlogDetails(blogId);
+  if (button.dataset.action === 'update') startEdit(blogId);
+  if (button.dataset.action === 'delete') deleteBlog(blogId);
 });
 
 form.addEventListener('submit', saveBlog);
+tagFilter.addEventListener('change', filterBlogs);
+userFilter.addEventListener('change', filterBlogs);
+
+loginForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('loginBtn');
+  clearMessage();
+  await withLoading(button, 'Logging in…', async () => {
+    try {
+      await login(
+        document.getElementById('loginIdentifier').value.trim(),
+        document.getElementById('loginPassword').value,
+      );
+      resetAuthForm(loginForm);
+      showMessage('You are now logged in.');
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  });
+});
+
+registerForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('registerBtn');
+  clearMessage();
+  await withLoading(button, 'Creating account…', async () => {
+    const account = Object.fromEntries(new FormData(registerForm));
+    try {
+      const response = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(account),
+      });
+      await readResponse(response, 'Unable to create account.');
+      await login(account.username, account.password);
+      resetAuthForm(registerForm);
+      showMessage('Account created and logged in.');
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  });
+});
+
+logoutBtn.addEventListener('click', async () => {
+  logoutBtn.disabled = true;
+  try {
+    if (!accessToken) await refreshAccessToken();
+    if (accessToken && csrfToken) {
+      await authenticatedRequest('/logout', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': csrfToken },
+      });
+    }
+    clearSession();
+    showMessage('You are logged out.');
+  } catch (error) {
+    clearSession();
+    showMessage(error.message, 'error');
+  } finally {
+    logoutBtn.disabled = false;
+  }
+});
+
+document.querySelectorAll('[data-toggle-password]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const input = document.getElementById(button.dataset.togglePassword);
+    const showing = input.type === 'password';
+    input.type = showing ? 'text' : 'password';
+    button.textContent = showing ? 'Hide' : 'Show';
+  });
+});
+
 cancelEditBtn.addEventListener('click', async () => {
   const blogId = returnToDetailsId;
   returnToDetailsId = null;
   resetForm();
   clearMessage();
-  if (blogId !== null) {
-    await openBlogDetails(blogId);
-  }
+  if (blogId !== null) await openBlogDetails(blogId);
 });
 refreshBtn.addEventListener('click', () => {
   clearMessage();
   loadBlogs();
 });
 detailsUpdateBtn.addEventListener('click', () => {
-  if (detailsBlogId !== null) {
-    startEdit(detailsBlogId);
-  }
+  if (detailsBlogId !== null) startEdit(detailsBlogId);
 });
 detailsDeleteBtn.addEventListener('click', () => {
-  if (detailsBlogId !== null) {
-    deleteBlog(detailsBlogId);
-  }
+  if (detailsBlogId !== null) deleteBlog(detailsBlogId);
 });
 document.getElementById('closeDetailsBtn').addEventListener('click', closeDetails);
 document.getElementById('closeDetailsIcon').addEventListener('click', closeDetails);
 detailsDialog.addEventListener('click', (event) => {
-  if (event.target === detailsDialog) {
-    closeDetails();
-  }
+  if (event.target === detailsDialog) closeDetails();
 });
 detailsDialog.addEventListener('close', () => {
   detailsBlogId = null;
 });
 
-const userForm = document.getElementById('userForm');
-
-userForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    const name = document.getElementById('newUserName').value.trim();
-
-    if (!name) return;
-
-    try {
-        const response = await fetch(`${API_URL}/users`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ name })
-        });
-
-        if (!response.ok) {
-            throw new Error('Unable to create user');
-        }
-
-        userForm.reset();
-
-        await loadUsers();
-
-        showMessage('User created successfully');
-
-    } catch (error) {
-        showMessage(error.message, 'error');
+async function restoreSession() {
+  try {
+    await loadCsrfToken();
+    if (await refreshAccessToken()) {
+      const response = await fetch(`${API_URL}/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        credentials: 'include',
+      });
+      currentUser = await readResponse(response, 'Unable to restore session.');
     }
-});
+  } catch (error) {
+    if (accessToken) {
+      clearSession();
+    }
+    showMessage(error.message, 'error');
+  }
+  syncAuthUi();
+}
 
+syncAuthUi();
 loadBlogs();
-loadUsers();
+restoreSession();
