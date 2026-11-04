@@ -10,27 +10,60 @@
     <div class="container">
       <header class="page-header">
         <h1>My Blogs</h1>
-        <button id="refreshBtn" class="secondary-btn" type="button">Refresh</button>
+        <div class="header-actions">
+          <span id="currentUser" class="hidden" aria-live="polite"></span>
+          <button id="logoutBtn" class="secondary-btn hidden" type="button">Log out</button>
+          <button id="refreshBtn" class="secondary-btn" type="button">Refresh</button>
+        </div>
       </header>
 
       <div id="message" class="message" aria-live="polite"></div>
 
-      <section class="form-panel">
-        <h2>Create New User</h2>
+      <section id="authPanel" class="form-panel auth-panel">
+        <div class="auth-forms">
+          <form id="loginForm">
+            <h2>Log in</h2>
+            <div class="field">
+              <label for="loginIdentifier">Username or email</label>
+              <input id="loginIdentifier" name="username" type="text" autocomplete="username" required />
+            </div>
+            <div class="field">
+              <label for="loginPassword">Password</label>
+              <div class="password-field">
+                <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+                <button class="secondary-btn password-toggle" type="button" data-toggle-password="loginPassword">Show</button>
+              </div>
+            </div>
+            <button id="loginBtn" type="submit" class="primary-btn">Log in</button>
+          </form>
 
-        <form id="userForm">
-          <label for="newUserName">User Name</label>
-          <input
-            type="text"
-            id="newUserName"
-            placeholder="Enter user name"
-            required/>
-
-          <button type="submit" class="primary-btn">Add User</button>
-        </form>
+          <form id="registerForm">
+            <h2>Create an account</h2>
+            <div class="field">
+              <label for="registerName">Name</label>
+              <input id="registerName" name="name" type="text" maxlength="100" autocomplete="name" required />
+            </div>
+            <div class="field">
+              <label for="registerUsername">Username</label>
+              <input id="registerUsername" name="username" type="text" minlength="3" maxlength="30" autocomplete="username" required />
+            </div>
+            <div class="field">
+              <label for="registerEmail">Email</label>
+              <input id="registerEmail" name="email" type="email" maxlength="254" autocomplete="email" required />
+            </div>
+            <div class="field">
+              <label for="registerPassword">Password (at least 12 characters)</label>
+              <div class="password-field">
+                <input id="registerPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />
+                <button class="secondary-btn password-toggle" type="button" data-toggle-password="registerPassword">Show</button>
+              </div>
+            </div>
+            <button id="registerBtn" type="submit" class="primary-btn">Register</button>
+          </form>
+        </div>
       </section>
 
-      <section class="form-panel">
+      <section id="blogFormPanel" class="form-panel hidden">
         <h2 id="formTitle">Create Blog</h2>
         <form id="blogForm">
           <input type="hidden" id="blogId" />
@@ -55,13 +88,6 @@
               <label for="author">Author</label>
               <input id="author" name="author" type="text" placeholder="Enter author" required />
             </div>
-          </div>
-         <div class="field">
-          <label for="userId">Select User</label>
-
-          <select id="userId" name="user_id" required>
-            <option value="">Select User</option>
-          </select>
           </div>
           <div class="field full-width">
             <label for="description">Description</label>
@@ -134,8 +160,8 @@
         </header>
         <dl id="detailsList" class="details-list"></dl>
         <div class="dialog-actions">
-          <button id="detailsUpdateBtn" class="edit-btn" type="button">Update</button>
-          <button id="detailsDeleteBtn" class="delete-btn" type="button">Delete</button>
+          <button id="detailsUpdateBtn" class="edit-btn hidden" type="button">Update</button>
+          <button id="detailsDeleteBtn" class="delete-btn hidden" type="button">Delete</button>
           <button id="closeDetailsBtn" class="secondary-btn" type="button">Close</button>
         </div>
       </div>

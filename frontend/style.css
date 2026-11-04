@@ -50,6 +50,42 @@ button {
   gap: 16px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-forms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.auth-forms form {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.auth-forms h2 {
+  margin-bottom: 4px;
+}
+
+.password-field {
+  display: flex;
+  gap: 8px;
+}
+
+.password-toggle {
+  flex: 0 0 auto;
+}
+
+#currentUser {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .page-header {
   margin-bottom: 24px;
 }
@@ -354,6 +390,15 @@ textarea {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .auth-forms {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .form-actions,
