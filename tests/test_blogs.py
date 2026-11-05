@@ -1,4 +1,7 @@
-from main import Blog, Tag, User
+from sqlalchemy.exc import SQLAlchemyError
+
+from database import get_db
+from main import Blog, Tag, User, app
 
 
 ORIGIN = "http://testserver"
@@ -45,6 +48,25 @@ def test_public_blog_reads_and_documentation(client):
     assert schema["components"]["securitySchemes"]["OAuth2PasswordBearer"]["flows"]["password"][
         "tokenUrl"
     ] == "/login"
+
+
+def test_database_errors_return_cors_visible_service_unavailable(client):
+    original_override = app.dependency_overrides[get_db]
+
+    def failed_db():
+        raise SQLAlchemyError("private database details")
+        yield
+
+    app.dependency_overrides[get_db] = failed_db
+    try:
+        response = client.get("/blogs", headers={"Origin": ORIGIN})
+    finally:
+        app.dependency_overrides[get_db] = original_override
+
+    assert response.status_code == 503
+    assert response.headers["access-control-allow-origin"] == ORIGIN
+    assert response.json() == {"detail": "Database operation failed"}
+    assert "private database details" not in response.text
 
 
 def test_blog_create_requires_auth_and_never_uses_client_owner(client, test_db):
