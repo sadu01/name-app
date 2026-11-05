@@ -52,6 +52,10 @@
               <input id="registerEmail" name="email" type="email" maxlength="254" autocomplete="email" required />
             </div>
             <div class="field">
+              <label for="registerMobileNumber">Mobile number (optional)</label>
+              <input id="registerMobileNumber" name="mobile_number" type="tel" maxlength="15" pattern="\+?[0-9]{1,15}" autocomplete="tel" inputmode="tel" title="Use digits and an optional leading + (maximum 15 characters)." />
+            </div>
+            <div class="field">
               <label for="registerPassword">Password (at least 12 characters)</label>
               <div class="password-field">
                 <input id="registerPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required />

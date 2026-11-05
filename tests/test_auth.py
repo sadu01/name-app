@@ -39,11 +39,52 @@ def test_registration_hashes_password_and_returns_safe_user(client, test_db):
     assert response.status_code == 201
     assert response.json()["role"] == "user"
     assert "password_hash" not in response.json()
+    assert "mobile_number" not in response.json()
 
     with test_db() as db:
         user = db.query(User).filter(User.username == "alice").one()
         assert user.password_hash.startswith("$argon2")
         assert user.password_hash != "correct-horse-battery"
+        assert user.mobile_number is None
+
+
+def test_registration_saves_optional_mobile_number(client, test_db):
+    response = client.post(
+        "/register",
+        headers={"Origin": ORIGIN},
+        json={
+            "name": "Alice Example",
+            "username": "alice",
+            "email": "alice@example.com",
+            "password": "correct-horse-battery",
+            "mobile_number": " +15551234567 ",
+        },
+    )
+    assert response.status_code == 201
+
+    with test_db() as db:
+        user = db.query(User).filter(User.username == "alice").one()
+        assert user.mobile_number == "+15551234567"
+
+
+def test_registration_rejects_invalid_mobile_number(client):
+    payload = {
+        "name": "Alice Example",
+        "username": "alice",
+        "email": "alice@example.com",
+        "password": "correct-horse-battery",
+        "mobile_number": "+1-555-123-4567",
+    }
+    invalid_format = client.post("/register", headers={"Origin": ORIGIN}, json=payload)
+    payload.update(
+        username="other",
+        email="other@example.com",
+        mobile_number="1234567890123456",
+    )
+    too_long = client.post("/register", headers={"Origin": ORIGIN}, json=payload)
+
+    assert invalid_format.status_code == 422
+    assert too_long.status_code == 422
 
 
 def test_registration_rejects_duplicate_username_or_email(client):

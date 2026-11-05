@@ -1,4 +1,5 @@
 import hmac
+import logging
 import os
 import re
 import uuid
@@ -43,6 +44,9 @@ from auth import (
 from database import Base, get_db
 
 
+logger = logging.getLogger(__name__)
+
+
 class RegisterRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -50,6 +54,7 @@ class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=30)
     email: EmailStr
     password: str = Field(min_length=12, max_length=128)
+    mobile_number: Optional[str] = Field(default=None, max_length=15)
 
     @field_validator("name")
     @classmethod
@@ -80,6 +85,20 @@ class RegisterRequest(BaseModel):
         if "\x00" in value or len(value.encode("utf-8")) > 128:
             raise ValueError("Password must be at most 128 bytes")
         return value
+
+    @field_validator("mobile_number")
+    @classmethod
+    def validate_mobile_number(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if not re.fullmatch(r"\+?[0-9]+", normalized):
+            raise ValueError("Mobile number must contain digits and an optional leading '+'")
+        if len(normalized) > 15:
+            raise ValueError("Mobile number must be at most 15 characters")
+        return normalized
 
 
 class BlogCreate(BaseModel):
@@ -197,7 +216,7 @@ class User(Base):
     email = Column(String(254), nullable=True)
     password_hash = Column(String(255), nullable=True)
     role = Column(String(20), nullable=False, default="user", server_default="user")
-
+    mobile_number = Column(String(15), nullable=True)
     profile = relationship("Profile", back_populates="user", uselist=False)
     blogs = relationship("Blog", back_populates="user")
 
@@ -450,6 +469,20 @@ async def sanitized_validation_error(
     return JSONResponse(status_code=422, content={"detail": errors})
 
 
+@app.exception_handler(SQLAlchemyError)
+async def database_error(
+    _request: Request, exc: SQLAlchemyError
+) -> JSONResponse:
+    logger.error(
+        "Database operation failed",
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Database operation failed"},
+    )
+
+
 @app.get("/")
 def home() -> dict:
     return {"message": "API"}
@@ -497,6 +530,7 @@ def register(
         email=data.email,
         password_hash=hash_password(data.password),
         role="user",
+        mobile_number=data.mobile_number,
     )
     try:
         db.add(user)
