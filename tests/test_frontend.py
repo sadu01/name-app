@@ -40,3 +40,6 @@ def test_frontend_exposes_auth_controls_and_uses_memory_only_tokens():
     assert "method: 'PATCH'" in script
     assert "currentUser = await authenticatedRequest('/me')" in script
     assert 'id="registerMobileNumber" name="mobile_number" type="tel"' in html
+
+    assert "restoreSession" not in script
+    assert script.rstrip().endswith("syncAuthUi();\nloadBlogs();")
