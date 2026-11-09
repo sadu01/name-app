@@ -50,12 +50,28 @@ def test_authentication_migration_preserves_existing_database_rows(tmp_path):
     config = Config(str(ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(ROOT / "alembic"))
     config.set_main_option("sqlalchemy.url", f"sqlite:///{database_path}")
+    command.upgrade(config, "9dcbc0c149f6")
+
+    connection = sqlite3.connect(database_path)
+    connection.execute(
+        "UPDATE users SET mobile_number = ? WHERE id = 17",
+        ("+155512345678901",),
+    )
+    connection.commit()
+    connection.close()
+
     command.upgrade(config, "head")
 
     connection = sqlite3.connect(database_path)
     user = connection.execute(
-        "SELECT id, name, username, email, password_hash, role FROM users WHERE id=17"
+        "SELECT id, name, username, email, password_hash, role, mobile_number "
+        "FROM users WHERE id=17"
     ).fetchone()
+    mobile_number_type = next(
+        row[2]
+        for row in connection.execute("PRAGMA table_info(users)").fetchall()
+        if row[1] == "mobile_number"
+    )
     blog = connection.execute(
         "SELECT id, title, description, user_id FROM blogs WHERE id=31"
     ).fetchone()
@@ -74,7 +90,8 @@ def test_authentication_migration_preserves_existing_database_rows(tmp_path):
     }
     connection.close()
 
-    assert user == (17, "Existing User", None, None, None, "user")
+    assert user == (17, "Existing User", None, None, None, "user", "+155512345678901")
+    assert mobile_number_type == "VARCHAR(20)"
     assert blog == (31, "Existing Blog", "Keep this description", 17)
     assert profile_city == "Existing City"
     assert tag_name == "Existing Tag"

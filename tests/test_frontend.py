@@ -36,3 +36,7 @@ def test_frontend_exposes_auth_controls_and_uses_memory_only_tokens():
     assert "sessionStorage" not in script
     assert "Number(blog.user_id) === Number(currentUser.id)" in script
     assert "user_id: Number(" not in script
+    assert {"profilePanel", "mobileNumberForm", "profileMobileNumber"} <= parser.ids
+    assert "method: 'PATCH'" in script
+    assert "currentUser = await authenticatedRequest('/me')" in script
+    assert 'id="registerMobileNumber" name="mobile_number" type="tel"' in html

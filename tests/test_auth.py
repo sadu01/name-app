@@ -48,7 +48,7 @@ def test_registration_hashes_password_and_returns_safe_user(client, test_db):
         assert user.mobile_number is None
 
 
-def test_registration_saves_optional_mobile_number(client, test_db):
+def test_registration_saves_optional_mobile_number_privately(client, test_db):
     response = client.post(
         "/register",
         headers={"Origin": ORIGIN},
@@ -57,14 +57,23 @@ def test_registration_saves_optional_mobile_number(client, test_db):
             "username": "alice",
             "email": "alice@example.com",
             "password": "correct-horse-battery",
-            "mobile_number": " +15551234567 ",
+            "mobile_number": " +1555123456789012345 ",
         },
     )
     assert response.status_code == 201
+    assert "mobile_number" not in response.json()
 
     with test_db() as db:
         user = db.query(User).filter(User.username == "alice").one()
-        assert user.mobile_number == "+15551234567"
+        assert user.mobile_number == "+1555123456789012345"
+
+    login_response = login(client)
+    assert "mobile_number" not in login_response["user"]
+    token = login_response["access_token"]
+    profile = client.get("/me", headers={"Authorization": f"Bearer {token}"})
+    assert profile.status_code == 200
+    assert profile.json()["mobile_number"] == "+1555123456789012345"
+    assert "mobile_number" not in client.get("/users").json()[0]
 
 
 def test_registration_rejects_invalid_mobile_number(client):
@@ -79,12 +88,68 @@ def test_registration_rejects_invalid_mobile_number(client):
     payload.update(
         username="other",
         email="other@example.com",
-        mobile_number="1234567890123456",
+        mobile_number="123456789012345678901",
     )
     too_long = client.post("/register", headers={"Origin": ORIGIN}, json=payload)
 
     assert invalid_format.status_code == 422
     assert too_long.status_code == 422
+
+
+def test_mobile_number_update_is_private_to_authenticated_user(client):
+    register(
+        client,
+        username="alice",
+        email="alice@example.com",
+    )
+    alice = login(client)["access_token"]
+    register(
+        client,
+        username="bob",
+        email="bob@example.com",
+    )
+    bob = login(client, username="bob")["access_token"]
+
+    updated = client.patch(
+        "/me",
+        headers={"Authorization": f"Bearer {alice}"},
+        json={"mobile_number": " +1202555012345678901 "},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["mobile_number"] == "+1202555012345678901"
+    assert client.get("/me", headers={"Authorization": f"Bearer {alice}"}).json()[
+        "mobile_number"
+    ] == "+1202555012345678901"
+    assert client.get("/me", headers={"Authorization": f"Bearer {bob}"}).json()[
+        "mobile_number"
+    ] is None
+
+    assert client.patch(
+        "/me",
+        headers={"Authorization": f"Bearer {bob}"},
+        json={"mobile_number": "2025550199", "user_id": 1},
+    ).status_code == 422
+    assert client.get("/me", headers={"Authorization": f"Bearer {alice}"}).json()[
+        "mobile_number"
+    ] == "+1202555012345678901"
+    assert client.patch(
+        "/me",
+        headers={"Authorization": f"Bearer {alice}"},
+        json={"mobile_number": "not-a-number"},
+    ).status_code == 422
+    assert client.patch(
+        "/me", json={"mobile_number": "2025550199"}
+    ).status_code == 401
+    preflight = client.options(
+        "/me",
+        headers={
+            "Origin": ORIGIN,
+            "Access-Control-Request-Method": "PATCH",
+            "Access-Control-Request-Headers": "authorization,content-type",
+        },
+    )
+    assert preflight.status_code == 200
+    assert "PATCH" in preflight.headers["access-control-allow-methods"]
 
 
 def test_registration_rejects_duplicate_username_or_email(client):

@@ -67,6 +67,19 @@
         </div>
       </section>
 
+      <section id="profilePanel" class="form-panel hidden" aria-labelledby="profileTitle">
+        <h2 id="profileTitle">Your account</h2>
+        <form id="mobileNumberForm">
+          <div class="field">
+            <label for="profileMobileNumber">Mobile number</label>
+            <input id="profileMobileNumber" name="mobile_number" type="tel" maxlength="20" pattern="\+?[0-9]{1,20}" autocomplete="tel" inputmode="tel" title="Use digits and an optional leading + (maximum 20 characters)." />
+          </div>
+          <div class="form-actions">
+            <button id="saveMobileNumberBtn" class="primary-btn" type="submit">Save mobile number</button>
+          </div>
+        </form>
+      </section>
+
       <section id="blogFormPanel" class="form-panel hidden">
         <h2 id="formTitle">Create Blog</h2>
         <form id="blogForm">
