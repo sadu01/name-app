@@ -36,3 +36,5 @@ def test_frontend_exposes_auth_controls_and_uses_memory_only_tokens():
     assert "sessionStorage" not in script
     assert "Number(blog.user_id) === Number(currentUser.id)" in script
     assert "user_id: Number(" not in script
+    assert "restoreSession" not in script
+    assert script.rstrip().endswith("syncAuthUi();\nloadBlogs();")

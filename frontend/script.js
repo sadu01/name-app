@@ -125,7 +125,7 @@ async function refreshAccessToken() {
 }
 
 async function authenticatedRequest(path, options = {}, retry = true) {
-  if (!accessToken && !(await refreshAccessToken())) {
+  if (!accessToken) {
     throw new Error('Please log in to manage blogs.');
   }
 
@@ -516,7 +516,6 @@ registerForm.addEventListener('submit', async (event) => {
 logoutBtn.addEventListener('click', async () => {
   logoutBtn.disabled = true;
   try {
-    if (!accessToken) await refreshAccessToken();
     if (accessToken && csrfToken) {
       await authenticatedRequest('/logout', {
         method: 'POST',
@@ -568,25 +567,5 @@ detailsDialog.addEventListener('close', () => {
   detailsBlogId = null;
 });
 
-async function restoreSession() {
-  try {
-    await loadCsrfToken();
-    if (await refreshAccessToken()) {
-      const response = await fetch(`${API_URL}/me`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        credentials: 'include',
-      });
-      currentUser = await readResponse(response, 'Unable to restore session.');
-    }
-  } catch (error) {
-    if (accessToken) {
-      clearSession();
-    }
-    showMessage(error.message, 'error');
-  }
-  syncAuthUi();
-}
-
 syncAuthUi();
 loadBlogs();
-restoreSession();
