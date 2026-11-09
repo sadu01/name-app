@@ -13,7 +13,7 @@ The refresh token is an HttpOnly cookie; the access token stays in frontend memo
 
 ## Schema migration
 
-The migration adds nullable username, email, and password-hash columns so existing user rows remain intact, assigns existing accounts the non-privileged `user` role, and creates session/token tables and uniqueness indexes. It never gives legacy accounts a password or assigns blog ownership.
+The migrations add nullable username, email, password-hash, and mobile-number columns so existing user rows remain intact, assign existing accounts the non-privileged `user` role, and create session/token tables and uniqueness indexes. Mobile numbers are private profile data: only the authenticated `/me` endpoints return them. Registration and public user/blog responses do not.
 
 Review the migration and take a database backup before applying it to any deployed database. It is not run at application startup:
 
@@ -34,7 +34,8 @@ Existing users without credentials cannot log in. Registration creates a new acc
 - `POST /login`: OAuth2 form fields `username` (username or email) and `password`; returns a 30-minute bearer access token and sets refresh/CSRF cookies.
 - `POST /refresh`: rotate the refresh cookie; requires the CSRF cookie/header pair.
 - `POST /logout`: revoke the current session; requires an access token and CSRF cookie/header pair.
-- `GET /me`: return the current user's safe profile.
+- `GET /me`: return the authenticated user's profile, including their private mobile number.
+- `PATCH /me`: update the authenticated user's own mobile number; send `{"mobile_number": "..."}` or `{"mobile_number": null}` to clear it.
 - `GET /blogs` and `GET /blogs/{id}` remain public. Blog creation, update, and deletion require authentication and ownership.
 
 User roles are not self-selectable; registration always creates a `user`. No admin-account bootstrap or email/password-reset delivery is configured.

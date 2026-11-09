@@ -30,6 +30,9 @@ const detailsDeleteBtn = document.getElementById('detailsDeleteBtn');
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const authPanel = document.getElementById('authPanel');
+const profilePanel = document.getElementById('profilePanel');
+const mobileNumberForm = document.getElementById('mobileNumberForm');
+const profileMobileNumber = document.getElementById('profileMobileNumber');
 
 let allBlogs = [];
 let accessToken = null;
@@ -158,12 +161,14 @@ function clearSession() {
 function syncAuthUi() {
   const authenticated = Boolean(currentUser && accessToken);
   authPanel.classList.toggle('hidden', authenticated);
+  profilePanel.classList.toggle('hidden', !authenticated);
   blogFormPanel.classList.toggle('hidden', !authenticated);
   logoutBtn.classList.toggle('hidden', !authenticated);
   currentUserDisplay.classList.toggle('hidden', !authenticated);
   currentUserDisplay.textContent = authenticated
     ? `Signed in as ${currentUser.name}`
     : '';
+  profileMobileNumber.value = authenticated ? currentUser.mobile_number ?? '' : '';
   renderBlogs(allBlogs);
   if (detailsBlogId !== null) {
     const blog = allBlogs.find((item) => item.id === detailsBlogId);
@@ -434,7 +439,7 @@ async function login(identifier, password) {
   accessToken = data.access_token;
   csrfToken = data.csrf_token;
   hasRefreshSession = true;
-  currentUser = data.user;
+  currentUser = await authenticatedRequest('/me');
   syncAuthUi();
   await loadBlogs();
 }
@@ -484,6 +489,25 @@ loginForm.addEventListener('submit', async (event) => {
       );
       resetAuthForm(loginForm);
       showMessage('You are now logged in.');
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  });
+});
+
+mobileNumberForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('saveMobileNumberBtn');
+  clearMessage();
+  await withLoading(button, 'Saving…', async () => {
+    try {
+      currentUser = await authenticatedRequest('/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile_number: profileMobileNumber.value.trim() }),
+      });
+      syncAuthUi();
+      showMessage('Mobile number updated.');
     } catch (error) {
       showMessage(error.message, 'error');
     }

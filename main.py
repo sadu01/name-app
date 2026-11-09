@@ -4,7 +4,7 @@ import os
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -54,7 +54,7 @@ class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=30)
     email: EmailStr
     password: str = Field(min_length=12, max_length=128)
-    mobile_number: Optional[str] = Field(default=None, max_length=15)
+    mobile_number: Optional[str] = Field(default=None, max_length=20)
 
     @field_validator("name")
     @classmethod
@@ -86,19 +86,36 @@ class RegisterRequest(BaseModel):
             raise ValueError("Password must be at most 128 bytes")
         return value
 
-    @field_validator("mobile_number")
+    @field_validator("mobile_number", mode="before")
     @classmethod
-    def validate_mobile_number(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return None
-        normalized = value.strip()
-        if not normalized:
-            return None
-        if not re.fullmatch(r"\+?[0-9]+", normalized):
-            raise ValueError("Mobile number must contain digits and an optional leading '+'")
-        if len(normalized) > 15:
-            raise ValueError("Mobile number must be at most 15 characters")
-        return normalized
+    def validate_mobile_number(cls, value: Any) -> Optional[str]:
+        return normalize_mobile_number(value)
+
+
+class MobileNumberUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mobile_number: Optional[str] = Field(max_length=20)
+
+    @field_validator("mobile_number", mode="before")
+    @classmethod
+    def validate_mobile_number(cls, value: Any) -> Optional[str]:
+        return normalize_mobile_number(value)
+
+
+def normalize_mobile_number(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("Mobile number must be a string")
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if len(normalized) > 20:
+        raise ValueError("Mobile number must be at most 20 characters")
+    if not re.fullmatch(r"\+?[0-9]+", normalized):
+        raise ValueError("Mobile number must contain digits and an optional leading '+'")
+    return normalized
 
 
 class BlogCreate(BaseModel):
@@ -216,7 +233,7 @@ class User(Base):
     email = Column(String(254), nullable=True)
     password_hash = Column(String(255), nullable=True)
     role = Column(String(20), nullable=False, default="user", server_default="user")
-    mobile_number = Column(String(15), nullable=True)
+    mobile_number = Column(String(20), nullable=True)
     profile = relationship("Profile", back_populates="user", uselist=False)
     blogs = relationship("Blog", back_populates="user")
 
@@ -390,6 +407,10 @@ def _safe_user(user: User) -> dict:
     }
 
 
+def _private_user(user: User) -> dict:
+    return {**_safe_user(user), "mobile_number": user.mobile_number}
+
+
 def _issue_access_token(user: User, session_id: str) -> dict:
     token, expires_in = create_access_token(user.id, session_id)
     return {"access_token": token, "token_type": "bearer", "expires_in": expires_in}
@@ -437,7 +458,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
 
@@ -725,7 +746,23 @@ def logout(
 
 @app.get("/me")
 def get_me(user: User = Depends(get_current_user)) -> dict:
-    return _safe_user(user)
+    return _private_user(user)
+
+
+@app.patch("/me")
+def update_me(
+    data: MobileNumberUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    user.mobile_number = data.mobile_number
+    try:
+        db.commit()
+        db.refresh(user)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Unable to update mobile number") from exc
+    return _private_user(user)
 
 
 def _require_blog_owner(blog: Blog, user: User) -> None:

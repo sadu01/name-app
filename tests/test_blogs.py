@@ -50,6 +50,33 @@ def test_public_blog_reads_and_documentation(client):
     ] == "/login"
 
 
+def test_blog_responses_never_expose_mobile_numbers(client):
+    registration = client.post(
+        "/register",
+        headers={"Origin": ORIGIN},
+        json={
+            "name": "Alice Example",
+            "username": "alice",
+            "email": "alice@example.com",
+            "password": "a-strong-password-123",
+            "mobile_number": "+12025550123",
+        },
+    )
+    assert registration.status_code == 201
+    token = register_and_login(client, "bob")
+    created = client.post(
+        "/blogs",
+        headers={"Authorization": f"Bearer {token}"},
+        json=blog_payload(tag_ids=[]),
+    )
+    assert created.status_code == 201
+    assert "mobile_number" not in created.json()
+    assert "mobile_number" not in client.get("/blogs").json()[0]
+    assert "mobile_number" not in client.get(
+        f"/blogs/{created.json()['id']}"
+    ).json()
+
+
 def test_database_errors_return_cors_visible_service_unavailable(client):
     original_override = app.dependency_overrides[get_db]
 
